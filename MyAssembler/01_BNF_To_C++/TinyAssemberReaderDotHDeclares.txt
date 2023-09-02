@@ -1,0 +1,64 @@
+		
+		void 						read(const char* sFile);
+		std::string					popOperator();
+		ENUM_OP_PRECEDENCE 			opFromString(std::string sOperator);
+		void						checkOpPrecedenceAndPush(std::string sCurrentOperator);
+		
+		static Tree*				makeLeaf(ASTNodeType eASTNodeType, const char* sText);
+		Tree*						makeNode(ASTNodeType eASTNodeType, Tree* pLeft, Tree* pRight);
+		Tree*						createPostFixExpr(Tree* pLeaf = nullptr);
+		
+		void						updateBlockString(std::string sIdent);
+		void						removeLastFromBlockString();
+		std::string					getBlockString();
+		std::string					getFullyQualifiedNameForVariable(Tree* pNode, std::string sVariable);
+
+		void 						addType(std::string sType);
+		bool						isValidType(std::string sType);
+		void 						addStructType(std::string sType);
+		bool 						isValidStructType(std::string sType);
+		Tree* 						hasNodeOfType(Tree* pNode, ASTNodeType eASTNodeType);
+		
+		void 						addInterfaceType(std::string sType);
+		bool 						isValidInterfaceType(std::string sType);
+		
+		void						pushLocalHeapVar(std::string sVariableName);
+		void						startBlockMarker();
+		void						endBlockMarker();
+		
+		E_VARIABLESCOPE 			getCurrentScope();
+		std::string 				getCurrentScopeString();
+		
+		Tree*						getStructNodeByName(std::string sStructName);
+		void						handleFunctionCallInExpr(std::string sFunctionType);
+		void 						clearTopOfExpressionStack();
+		
+		void 						pushNewStmt(E_OPCODEASM eE_OPCODEASM);
+	protected:
+		
+	private:
+		std::stack<std::string>		m_vOperatorStack;
+		std::vector<std::string>	m_vPostFix;
+		
+		std::stack<std::string>		m_vLocalHeapVarStack;
+		
+		Tree*						m_pASTRootNode;
+		Tree*						m_pASTCurrentNode;
+		Tree*						m_pASTCurrentBlockNode;
+		Tree*						m_pASTPrevBlockNode;
+		
+		std::vector<std::string>	m_sBlockStringList;
+		bool						m_bInterfaceInProcess;
+		bool						m_bStructInProcess;
+		bool						m_bFunctionInProcess;
+		
+		std::vector<Tree*>			m_vStructs;
+		std::vector<Tree*>			m_vInterfaces;
+		
+		std::vector<std::unique_ptr<OpcodeStmt>>	m_vAsmStmts;
+		OpcodeStmt* 								m_pCurrentStmt;
+		
+		std::string									m_sLastLocalData;
+		
+		E_OPERAND_NUM								m_eE_OPERAND_NUM;
+		E_OPERAND_TYPE								m_eE_OPERAND_TYPE;		

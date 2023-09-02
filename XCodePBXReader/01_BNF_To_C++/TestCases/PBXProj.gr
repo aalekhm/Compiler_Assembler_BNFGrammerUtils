@@ -1,0 +1,232 @@
+
+// http://www.simplecpu.com/Binary.html
+/*
+// https://www.wikiwand.com/en/Just-in-time_compilation
+*/
+
+<def>							::= 	<SECTION>;
+											
+<NAME_VALUE_PAIRS>				::=		{ <NAME_AND_VALUE> } ;
+
+<NAME_AND_VALUE>				::=						"<code>"
+															PBXParseHelper* pPBXParseHelper = GetPBXParserHelper();
+														"</code>"
+										<NAME_TYPES> 
+														"<code>"
+															std::string sName = PREV_TOKEN_TEXT;
+															pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey = PREV_TOKEN_TEXT;
+															std::cout << PREV_TOKEN_TEXT;
+															
+															if (sName == "isa")
+															{
+																pPBXParseHelper->m_pCurrentPBXObject->m_iParseState = EPBXTYPE_PARSE_STATE::ISA_TYPE;
+															}
+														"</code>"
+										'=' 
+														"<code>"
+															std::cout << " = ";
+														"</code>"
+										[ <VALUE_TYPES> ]
+														"<code>"
+															std::cout << PREV_TOKEN_TEXT << "\n";
+														"</code>"
+										';';
+
+<NAME_TYPES>					::= 					"<code>"
+															PBXParseHelper* pPBXParseHelper = GetPBXParserHelper();
+														"</code>"
+										( 	TK_PBXNUMBER 
+														"<code>"
+															pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType = EPBXVALUE_TYPE::NUMBER;
+														"</code>"
+											| 
+											TK_PBXIDENTIFIER 
+														"<code>"
+															pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType = EPBXVALUE_TYPE::IDENTIFIER;
+														"</code>"
+											| 
+											TK_STRING 
+														"<code>"
+															pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType = EPBXVALUE_TYPE::STRING;
+														"</code>"
+										) ;
+
+<SECTION>						::=						"<code>"
+															PBXParseHelper* pPBXParseHelper = GetPBXParserHelper();
+														"</code>"
+										'{' 
+														"<code>"
+															pPBXParseHelper->m_pCurrentPBXObjectStack.push_back( std::make_unique<PBXObject>() );
+															pPBXParseHelper->m_pCurrentPBXObject = pPBXParseHelper->m_pCurrentPBXObjectStack.back().get();
+
+															std::cout << '{' << "\n";
+														"</code>"
+											[ <NAME_VALUE_PAIRS> ] 
+										'}'
+														"<code>"
+															PBXObject* pCurrentPBXObject = nullptr;
+															bool bFound = false;
+															std::string sPBXType = "";
+
+															if (pPBXParseHelper->m_pCurrentPBXObject->m_iParseState == EPBXTYPE_PARSE_STATE::END_OF_TYPE)
+															{
+																bFound = true;
+																pCurrentPBXObject = pPBXParseHelper->m_pCurrentPBXObject;
+																sPBXType = pPBXParseHelper->m_pCurrentPBXObject->m_sPBXType;
+																std::cout << "PBX TYPE = " << sPBXType << "\n";
+																pPBXParseHelper->m_pCurrentPBXObject->m_iParseState = EPBXTYPE_PARSE_STATE::START;
+															}
+
+															std::unique_ptr<PBXObject> pLastPBXObject = std::move( pPBXParseHelper->m_pCurrentPBXObjectStack.back() );
+															pPBXParseHelper->m_pCurrentPBXObjectStack.pop_back();
+
+															if ( pPBXParseHelper->m_pCurrentPBXObjectStack.size() > 0)
+															{
+																pPBXParseHelper->m_pCurrentPBXObject = pPBXParseHelper->m_pCurrentPBXObjectStack.back().get();
+																std::cout << "KEY = " << pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey << "\n";
+
+																pLastPBXObject->m_sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+																pLastPBXObject->m_sKeyType = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType;
+																
+																pPBXParseHelper->m_pCurrentPBXObject->m_ChildMap[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey] = std::move( pLastPBXObject );
+																PBXObject* pLastPBXObjectRaw = pPBXParseHelper->m_pCurrentPBXObject->m_ChildMap[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey].get();
+
+																if(bFound)
+																{
+																	std::string sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+
+																	if (m_pPBXHelper->m_pTypeListMap[sPBXType] == nullptr)
+																	{
+																		m_pPBXHelper->m_pTypeListMap[sPBXType] = std::make_unique<PBXTypeList>(sPBXType);
+																	}
+
+																	PBXTypeList* pPBXTypeList = m_pPBXHelper->m_pTypeListMap[sPBXType].get();
+																	if (pPBXTypeList != nullptr)
+																	{
+																		pCurrentPBXObject->m_sKey = sKey;
+																		pPBXTypeList->m_pObjectList[sKey] = pCurrentPBXObject;
+																	}
+																}
+															}
+															else
+															{
+																m_pPBXHelper->m_pRootPBXObject = std::move( pLastPBXObject );
+															}
+														"</code>"
+										;
+
+<VALUE_TYPES>					::=						"<code>"
+															PBXParseHelper* pPBXParseHelper = GetPBXParserHelper();
+														"</code>"
+										( 	<SECTION> 
+											| 
+											TK_STRING 
+														"<code>"
+
+															std::unique_ptr<PBXValue> pValue = std::make_unique<PBXValue>();
+															{
+																pValue.get()->m_sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+																pValue.get()->m_ePbxKeyType = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType;
+																pValue.get()->m_sValue = PREV_TOKEN_TEXT;
+																pValue.get()->m_ePbxValueType = EPBXVALUE_TYPE::STRING;
+																
+																pPBXParseHelper->m_pCurrentPBXObject->m_PairMap[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey] = std::move(pValue);
+																if (pPBXParseHelper->m_pCurrentPBXObject->m_iParseState == EPBXTYPE_PARSE_STATE::ISA_TYPE)
+																{
+																	pPBXParseHelper->m_pCurrentPBXObject->m_iParseState = EPBXTYPE_PARSE_STATE::END_OF_TYPE;
+																	pPBXParseHelper->m_pCurrentPBXObject->m_sPBXType = PREV_TOKEN_TEXT;
+																}
+															}
+														"</code>"
+											| 
+											TK_PBXIDENTIFIER 
+														"<code>"
+															std::unique_ptr<PBXValue> pValue = std::make_unique<PBXValue>();
+															{
+																pValue.get()->m_sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+																pValue.get()->m_ePbxKeyType = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType;
+																pValue.get()->m_sValue = PREV_TOKEN_TEXT;
+																pValue.get()->m_ePbxValueType = EPBXVALUE_TYPE::IDENTIFIER;
+																
+																pPBXParseHelper->m_pCurrentPBXObject->m_PairMap[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey] = std::move(pValue);
+																if (pPBXParseHelper->m_pCurrentPBXObject->m_iParseState == EPBXTYPE_PARSE_STATE::ISA_TYPE)
+																{
+																	pPBXParseHelper->m_pCurrentPBXObject->m_iParseState = EPBXTYPE_PARSE_STATE::END_OF_TYPE;
+																	pPBXParseHelper->m_pCurrentPBXObject->m_sPBXType = PREV_TOKEN_TEXT;
+																}
+															}
+														"</code>"
+											| 
+											TK_PBXNUMBER 
+														"<code>"
+															std::unique_ptr<PBXValue> pValue = std::make_unique<PBXValue>();
+															{
+																pValue.get()->m_sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+																pValue.get()->m_ePbxKeyType = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKeyType;
+																pValue.get()->m_sValue = PREV_TOKEN_TEXT;
+																pValue.get()->m_ePbxValueType = EPBXVALUE_TYPE::NUMBER;
+																
+																pPBXParseHelper->m_pCurrentPBXObject->m_PairMap[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey] = std::move(pValue);
+																if (pPBXParseHelper->m_pCurrentPBXObject->m_iParseState == EPBXTYPE_PARSE_STATE::ISA_TYPE)
+																{
+																	pPBXParseHelper->m_pCurrentPBXObject->m_iParseState = EPBXTYPE_PARSE_STATE::END_OF_TYPE;
+																	pPBXParseHelper->m_pCurrentPBXObject->m_sPBXType = PREV_TOKEN_TEXT;
+																}
+															}
+														"</code>"
+											| 
+											<PBX_ARRAY> 
+										);
+
+<PBX_ARRAY_ELEMENTS>			::=		( TK_PBXNUMBER | TK_PBXIDENTIFIER | TK_STRING ) ;
+
+<PBX_ARRAY>						::=						"<code>"
+															std::unique_ptr<PBXList> pPBXList = nullptr;
+															PBXParseHelper* pPBXParseHelper = GetPBXParserHelper();
+														"</code>"
+										'('
+														"<code>"
+															pPBXList = std::make_unique<PBXList>();
+															std::cout << '(' << "\n";
+														"</code>"
+											{	
+												<PBX_ARRAY_ELEMENTS> 
+														"<code>"
+															std::unique_ptr<PBXValue> pPBXValue = std::make_unique<PBXValue>();
+
+															switch (PREV_TOKEN.getType())
+															{
+																case TokenType_::Type::TK_PBXNUMBER:
+																{
+																	pPBXValue->m_ePbxValueType = EPBXVALUE_TYPE::NUMBER;
+																}
+																break;
+																case TokenType_::Type::TK_PBXIDENTIFIER:
+																{
+																	pPBXValue->m_ePbxValueType = EPBXVALUE_TYPE::IDENTIFIER;
+																}
+																break;
+																case TokenType_::Type::TK_STRING:
+																{
+																	pPBXValue->m_ePbxValueType = EPBXVALUE_TYPE::STRING;
+																}
+																break;
+															}
+			
+															pPBXValue.get()->m_sValue = PREV_TOKEN_TEXT;
+
+															pPBXList->m_vList.push_back( std::move(pPBXValue) );
+															std::cout << '\t' << PREV_TOKEN_TEXT << "\n";
+														"</code>"
+												[','] 
+											}
+										')' 
+														"<code>"
+															if (pPBXList != nullptr)
+															{
+																pPBXList->m_sKey = pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey;
+																pPBXParseHelper->m_pCurrentPBXObject->m_List[pPBXParseHelper->m_pCurrentPBXObject->m_sCurrentlyProcessingKey] = std::move( pPBXList );
+															}
+														"</code>"
+										;
+											

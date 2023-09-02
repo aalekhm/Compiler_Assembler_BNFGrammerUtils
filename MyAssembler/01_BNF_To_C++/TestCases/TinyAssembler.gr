@@ -1,0 +1,967 @@
+
+// http://www.simplecpu.com/Binary.html
+// https://www.wikiwand.com/en/Just-in-time_compilation
+
+<def>							::= 		"section" 
+											"<code>"
+											
+											"</code>"
+											{ <sectionBody> };
+											
+<sectionBody>					::=			'.' TK_IDENTIFIER
+											{ <instructions> };
+											
+<instructions>					::=			[ <label> ] <instruction>;
+											
+<label>							::=			TK_IDENTIFIER ':';
+											
+<instruction>					::=			(	<instructionHlt>
+												|
+												<instructionCall>
+												|
+												<instructionRet>
+												|
+												<instructionNot>
+												|
+												<instructionNeg>
+												|
+												<instructionNop>
+												|
+												<instructionMov>
+												|
+												<instructionPush>
+												|
+												<instructionPop>
+												|
+												<instructionLea>
+												|
+												<instructionAdd>
+												|
+												<instructionSub>
+												|
+												<instructionInc>
+												|
+												<instructionDec>
+												|
+												<instructionIMul>
+												|
+												<instructionIDiv>
+												|
+												<instructionAnd>
+												|
+												<instructionOr>
+												|
+												<instructionXor>
+												|
+												<instructionShl>
+												|
+												<instructionShr>
+												|
+												<instructionJmp>
+												|
+												<instructionCmp>
+											);
+	
+//<operand>						::=			(	<register_>
+//												|
+//												<immediate>
+//												|
+//												<memory>
+//											);
+											
+											// EDI, ESI, ESP, EBP, EAX, EBX, ECX, EDX, R8, R9, R10, R11, R12, R13, R14, R15
+<register_>						::=			(	"EDI"
+												|
+												"ESI"
+												|
+												"ESP"
+												|
+												"EBP"
+												|
+												"EAX"
+												|
+												"EBX"
+												|
+												"ECX"
+												|
+												"EDX"
+												|
+												"R0"
+												|
+												"R1"
+												|
+												"R2"
+												|
+												"R3"
+												|
+												"R4"
+												|
+												"R5"
+												|
+												"R6"
+												|
+												"R7"
+												|
+												"AX"
+												|
+												"BX"
+												|
+												"CX"
+												|
+												"DX"
+												|
+												"AH"
+												|
+												"BH"
+												|
+												"CH"
+												|
+												"DH"
+												|
+												"AL"
+												|
+												"BL"
+												|
+												"CL"
+												|
+												"DL"
+											);
+												
+<immediate>						::=			(	TK_INTEGER
+												//|
+												//TK_HEX
+												//|
+												//TK_OCTAL
+												//|
+												//TK_BINARY
+											);
+												
+												
+											// [ BASE_REG ]							// (a)
+											// [ BASE_REG * SCALE ]						// (b)
+											// [ BASE_REG - DISP ]						// (c)
+											// [ BASE_REG + DISP ]						// (d)
+											// [ BASE_REG + INDEX_REG ]					// (e)
+											// [ BASE_REG + INDEX_REG * SCALE ]			// (f)
+											// [ BASE_REG + INDEX_REG * SCALE + DISP ]		// (g)
+											// [ BASE_REG + INDEX_REG * SCALE - DISP ]		// (h)
+<memory>						::=			'[' 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+												"</code>"
+											<baseIndexOperand> 
+											']';	// b. c. d. e.
+	
+											// [ EBX * 2 ]
+	
+<baseIndexOperand>				::=			<register_>								// (a)
+											"<code>"
+												m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+												m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::BASE_REG, PREV_TOKEN_TEXT);
+											"</code>"
+											
+											[ <addressComponents> ]
+											;
+											
+<addressComponents>				::=			(	<scalingMultiplier>					// (b)
+												|	
+												<negDisplacementComponent>			// (c)
+												|
+												<indexComponent> 
+											);
+											
+<scalingMultiplier>				::=			'*'
+											<scale>
+												"<code>"
+													m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::SCALE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+											
+<displacementComponent>			::=			TK_INTEGER
+												"<code>"
+													m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::DISP_CONST, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+											
+<negDisplacementComponent>		::=			'-'
+												"<code>"
+													m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::DISP_ADD_SUB, "-");
+												"</code>"
+											<displacementComponent>
+											;
+											
+<indexComponent>				::=			'+'
+											(	<displacementComponent>				// (d)
+												"<code>"
+														m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::DISP_ADD_SUB, "+");
+												"</code>"
+												|
+												<indexRegComponent>
+											);
+											
+<indexRegComponent>				::=			<register_>								// (e)
+												"<code>"
+													m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::INDEX_REG, PREV_TOKEN_TEXT);
+												"</code>"
+											[ <scalingMultiplier> ]					// (f)
+											[ 	<addOrSub> 
+												"<code>"
+														m_pCurrentStmt->setMemBit(m_eE_OPERAND_NUM, E_MEMOP::DISP_ADD_SUB, PREV_TOKEN_TEXT);
+												"</code>"													
+												<displacementComponent> 			// (g)(h)
+											]
+											;
+											
+<addOrSub>						::=			(	'+'
+												|
+												'-'
+											);
+											
+<scale>							::=			(	'1'
+												|
+												'2'
+												|
+												'4'
+											);
+											
+<instructionHlt>				::=			"HLT"
+											"<code>"
+												NEW_STMT(E_OPCODEASM::ASM_HLT);
+											"</code>";
+	
+<instructionCall>				::=			"CALL"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_CALL);
+
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<instructionRet>				::=			"RET"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_RET);
+												"</code>"
+											;
+	
+											// Logically negates the operand contents (that is, flips all bit values in the operand).
+<instructionNot>				::=			"NOT" 
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_NOT_R);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memoryOrRegister>
+												"<code>"
+													SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, -1)
+
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+											// Performs the two's complement negation of the operand contents. 
+<instructionNeg>				::=			"NEG" 
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_NEG_R);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memoryOrRegister>
+												"<code>"
+													SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, -1)
+
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<memoryOrRegisterOrConst32>		::=			( 	<register_> 
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													"</code>"
+												|
+												<memory>
+												|
+												<const32>
+											);
+											
+<memoryOrRegister>				::=			( 	<memory>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+													"</code>"
+												| 
+												<register_> 
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													"</code>"
+											);
+	
+<instructionNop>				::=			"NOP"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_NOP);
+												"</code>"
+											;
+											
+											// Addressed Memory:
+											//	 D(RA, RB, Mul) = RA + RB * M(ultiplier) + D(isplacement, 32)
+											// Examples
+											// mov %eax, (%ebx) 			/* Load 4 bytes from the memory address in EBX into EAX. */
+											// mov var(,1), %ebx  			/* Move the contents of EBX into the 4 bytes at memory address var. (Note, var is a 32-bit constant). */
+											// mov %eax, -4(%esi) 			/* Move 4 bytes at memory address ESI + (-4) into EAX. */
+											// mov (%esi,%eax,1), %cl     	/* Move the contents of CL into the byte at address ESI+EAX. */
+											// mov %edx, (%esi,%ebx,4)      /* Move the 4 bytes of data at address ESI+4*EBX into EDX. */
+											
+											// These are the basic forms of Memory Addressing:
+											// Supported variants of 'MOV'
+											//		MOV       R1, 1
+											//		MOV       R1, R2
+											//		MOV       R1, [ R2 ]
+											//		MOV       R1, [ R2 + R3]
+											//		MOV       R1, [ R2 + R3 * 8]
+											//		MOV       R1, [ R2 + R3 * 8 + 10]
+											//		MOV       R1, [ R2 + R3 * 8 + R4]
+											//		MOV       R1, message
+											//		
+											//		MOV       [ R2 ], R1
+											//		MOV       [ R2 + R3], R1
+											//		MOV       [ R2 + R3 * 8], R1
+											//		MOV       [ R2 + R3 * 4 + 10], R1
+											//		MOV       [ R2 + R3 * 2 + R4], R1
+											//		MOV       [ R2 + R3 * 1 + 12], message2
+											//		MOV       [ R2 + R3 * 8 + R4], 555
+<instructionMov>				::=			<movType>
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_MOVD_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+											
+<movType>						::=			(	"MOVB"			// 8 bit
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_MOVB_R_R);
+												"</code>"
+												|
+												"MOVW"			// 16 bit
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_MOVW_R_R);
+												"</code>"
+												|
+												"MOVD"			// 32 bit
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_MOVD_R_R);
+												"</code>"
+												|
+												"MOV"			// 32 bit
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_MOVD_R_R);
+												"</code>"
+											);
+	
+<registerOrConst_To_memory>		::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memory> 
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, "");
+												"</code>"
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											( 	<register_>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+												| 
+												<const32>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											);
+
+<registerOrConst_To_register>	::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<register_> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											( 	<register_> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+												| 
+												<const32>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											);
+
+<registerOrMemoryOrConst_To_register>::=		"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<register_>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											','
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											<memoryOrRegisterOrConst32>
+												"<code>"
+													if(m_eE_OPERAND_TYPE == E_OPERAND_TYPE::_CONST || m_eE_OPERAND_TYPE == E_OPERAND_TYPE::_LABEL)
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+											// push %eax — push eax on the stack
+											// push var(,1) — push the 4 bytes at address var onto the stack
+<instructionPush>				::=			"PUSH"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_PUSH_R);
+													
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memoryOrRegisterOrConst32>
+												"<code>"
+													if(m_eE_OPERAND_TYPE == E_OPERAND_TYPE::_CONST || m_eE_OPERAND_TYPE == E_OPERAND_TYPE::_LABEL)
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+												"</code>"
+											;
+	
+											// pop %edi — pop the top element of the stack into EDI.
+											// pop (%ebx) — pop the top element of the stack into memory at the four bytes starting at location EBX. 
+<instructionPop>				::=			"POP" 
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_POP_R);
+													
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memoryOrRegister>
+												"<code>"
+													SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, -1)
+
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<register_To_register>			::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<register_> 
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											<register_>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<memory_To_register>			::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<register_> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											<memory>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<register_To_memory>			::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<memory> 
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											<register_>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											;
+
+<register_To_immediate>			::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<immediate> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											<register_>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"												
+											;
+											
+											// lea %edi, (%ebx,%esi,8) — the quantity EBX+8*ESI is placed in EDI.
+<instructionLea>				::=			"LEA"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_LEA_R_M);
+												"</code>"
+											<memory_To_register>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+											// The add instruction adds together its two operands, storing the result in its 1st operand.
+											// Note, whereas both operands may be registers, at most one operand may be a memory location. 
+											// Examples
+											// add %eax, $10  — EAX is set to EAX + 10
+											// addb (%eax), $10  — add 10 to the single byte stored at memory address stored in EAX 
+<instructionAdd>				::=			"ADD"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_ADD_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_ADD_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+											
+<instructionSub>				::=			"SUB"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_SUB_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_SUB_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+											
+											// incl var(,1) — add one to the 32-bit integer stored at location var
+<instructionInc>				::=			"INC"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_INC_R);
+													
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											(	<register_>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+														SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													"</code>"
+												|
+												<memory>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_INC_M);
+												"</code>"
+											);
+											
+											// dec %eax — subtract one from the contents of EAX
+<instructionDec>				::=			"DEC"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_DEC_R);
+													
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											(	<register_>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+														SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													"</code>"
+												|
+												<memory>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_DEC_M);
+												"</code>"
+											);
+											
+											// Integer multiplication:
+												// The imul instruction has two basic formats: two-operand (first two syntax listings above) and three-operand (last two syntax listings above).
+												// The two-operand form multiplies its two operands together and stores the result in the second operand. 
+												// The result (i.e. second) operand must be a register.
+												// The three operand form multiplies its second and third operands together and stores the result in its last operand. 
+												// Again, the result operand must be a register. Furthermore, the first operand is restricted to being a constant value. 
+												// Examples:
+												//		imul (%ebx), %eax — multiply the contents of EAX by the 32-bit contents of the memory at location EBX. Store the result in EAX.
+												//		imul $25, %edi, %esi — ESI is set to EDI * 25 
+	
+<instructionIMul>				::=			"IMUL"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_IMUL_R_R);
+												"</code>"
+											<imm_To_regMem_To_register>					// IMUL <reg>, <reg>
+																						// IMUL <reg>, <mem>
+																						// IMUL <reg>, <const32>
+																						// IMUL <reg>, <reg>, <const32>
+																						// IMUL <reg>, <mem>, <const32>
+																						// IMUL <reg>, <const32>, <const32>
+											;
+											
+<imm_To_regMem_To_register>		::=				"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<register_> 								// <reg>
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											','
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_1);
+												"</code>"
+											(	<optionalConst_To_register>				// <reg> [ , <const32> ]
+												|
+												<optionalConst_To_memory>				// <mem> [, <const32> ]
+												|
+												<optionalConst_To_const>				// <const32> [, <const32> ]
+											);
+											
+<optionalConst_To_register>		::=			<register_> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_R);
+												"</code>"
+											[ 	',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_2);
+												"</code>"
+												<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_R_K);
+												"</code>"
+											];
+	
+<optionalConst_To_memory>		::=			<memory> 
+												"<code>"
+													m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_M);
+												"</code>"
+											[ 	',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_2);
+												"</code>"
+												<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_M_K);
+												"</code>"
+											];
+
+<optionalConst_To_const>		::=			<const32> 
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_K);
+												"</code>"
+											[ 	',' 
+												"<code>"
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_2);
+												"</code>"
+												<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+													SET_OPCODE(E_OPCODEASM::ASM_IMUL_R_K_K);
+												"</code>"
+											];
+
+											// Integer division:
+												// 64bit Dividend constructed by EDX:EAX is divided by the Divisor(1st operand)
+												// Quotient stored in EAX
+												// Remainder stored in EDX
+												//  Examples:
+												//		idiv %ebx — divide the contents of EDX:EAX by the contents of EBX. 
+												//					Place the quotient in EAX and the remainder in EDX.
+												//		idivw (%ebx) — divide the contents of EDX:EAS by the 32-bit value stored at the memory location in EBX.
+												//					   Place the quotient in EAX and the remainder in EDX.
+<instructionIDiv>				::=			"IDIV"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_IDIV_R);
+													
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											(	<register_>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_REG;
+														SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+														SET_OPCODE(E_OPCODEASM::ASM_IDIV_R);
+													"</code>"
+												|
+												<memory>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_MEM;
+														SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+														SET_OPCODE(E_OPCODEASM::ASM_IDIV_M);
+													"</code>"
+											);
+	
+<instructionAnd>				::=			"AND"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_AND_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_AND_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+											
+<instructionOr>					::=			"OR"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_OR_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_OR_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+	
+<instructionXor>				::=			"XOR"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_XOR_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_XOR_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+	
+<instructionShl>				::=			"SHL"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_SHL_R_R);
+												"</code>"
+											(	<registerOrConst_To_register>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_SHL_R_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_SHL_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+	
+<instructionShr>				::=			"SHR"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_SHR_R_R);
+												"</code>"
+											(	<registerOrConst_To_register>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_SHR_R_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_SHR_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);
+											
+<const_To_register>				::=			<register_> ',' <const32>;
+
+<const32>						::=			( 	<immediate>
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_CONST;
+													"</code>"
+												| 
+												TK_IDENTIFIER
+													"<code>"
+														m_eE_OPERAND_TYPE = E_OPERAND_TYPE::_LABEL;
+													"</code>"
+											);
+
+	
+<instructionJmp>				::=			(	<jmp>
+												|
+												<je>
+												|
+												<jne>
+												|
+												<jz>
+												|
+												<jg>
+												|
+												<jge>
+												|
+												<jl>
+												|
+												<jle>
+											);
+											
+<jmp>							::=			"JMP"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JMP);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+											
+<je>							::=			"JE"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JE);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+											
+<jne>							::=			"JNE"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JNE);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+<jz>							::=			"JZ"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JZ);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+<jg>							::=			"JG"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JG);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+<jge>							::=			"JGE"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JGE);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+<jl>							::=			"JL"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JL);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+
+<jle>							::=			"JLE"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_JLE);
+													SET_CUR_OP_NUM(E_OPERAND_NUM::_0);
+												"</code>"
+											<const32>
+												"<code>"
+													SET_OP_TYPE(m_eE_OPERAND_NUM, m_eE_OPERAND_TYPE, PREV_TOKEN_TEXT);
+												"</code>"
+											;
+	
+<instructionCmp>				::=			"CMP"
+												"<code>"
+													NEW_STMT(E_OPCODEASM::ASM_CMP_R_R);
+												"</code>"
+											(	<registerOrMemoryOrConst_To_register>
+													"<code>"
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_MEM, E_OPERAND_TYPE::_CONST)
+													"</code>"
+												|
+												<registerOrConst_To_memory>
+													"<code>"
+														SET_OPCODE(E_OPCODEASM::ASM_CMP_M_R);
+														SET_OPCODE_BY_TYPE(E_OPERAND_TYPE::_REG, E_OPERAND_TYPE::_CONST, -1)
+													"</code>"
+											);

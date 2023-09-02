@@ -1,0 +1,53 @@
+
+OVERVIEW:
+	
+	LANGUAGE GRAMMER	- Decides the structure & syntax of the Programming Language.
+						- Backus Naur Form (BNF notation)
+						- Eg:
+							int32_t i = 101;
+							In BNF notation:
+							
+							<stmt_list>			::= { <statement> } ';';
+							<statement> 		::= <primitive_type> TK_IDENTIFIER "=" TK_INTEGER;
+							<primitive_type>	::= (	"int8_t"
+														|
+														"int16_t"
+														|
+														"int32_t"
+													);
+													
+							where <statement>, <primitive_type> are Non-Terminals & TK_IDENTIFIER, TK_INTEGER "=" are Terminals.
+							
+							EBNF Visualizer
+								http://dotnet.jku.at/applications/visualizer/
+
+Python is slower than C because it is an interpreted language.
+							
+Another name for a virtual machine is a “bytecode interpreter”.
+Interpreted code is always slower than direct machine code, because it takes a lot more instructions in order to implement an interpreted instruction than to implement an actual machine instruction.
+
+
+
+BINARY STRUCTURE:
+	STRING COUNT
+	[	
+		{
+			STRING SIZE
+			STRING
+		}
+		...
+	]
+	STATIC VARIABLE COUNT
+	CODE BINARY
+	
+	
+MEMORY LAYOUT:
+			RAM ==============>
+			 0																																												  RAM SIZE
+			 |---------------------------------------------------------------------|-------------------------------------|-----------|--------------------------------------------|---------------------|
+			 |							CODE								       |				DATA					GLOBALS	 |					HEAP								STACK		|
+		     |																	   |												 |																	|
+		     |																	   |												 |																	|
+	   CS_START_OFFSET														DS_START_OFFSET								 	  HEAP START OFFSET													STACK START OFFSET
+																																	 |========>											   <============|
+																																	 Heap Growth											Stack Growth

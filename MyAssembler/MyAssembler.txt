@@ -1,0 +1,532 @@
+File Watch on Win32:
+	https://stackoverflow.com/questions/931093/how-do-i-make-my-program-watch-for-file-modification-in-c
+		https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstchangenotificationa
+		Eg: https://docs.microsoft.com/en-us/windows/win32/fileio/obtaining-directory-change-notifications
+	
+PE Format:
+	https://docs.microsoft.com/en-us/windows/win32/debug/pe-format
+
+Hot Patching:
+	https://www.codeproject.com/Articles/1043089/HotPatching-VERY-Deep-Inside
+
+Debug Interface Access SDK
+	https://docs.microsoft.com/en-us/visualstudio/debugger/debug-interface-access/debug-interface-access-sdk?view=vs-2015
+
+Real-Time Rendering Resources
+	http://www.realtimerendering.com/#books-small-table
+
+
+http://harmful.cat-v.org/software/c++/linus
+
+Books
+	https://id.b-ok.org/Programming-Compilers-cat90
+	https://id.b-ok.org/categories
+	https://wordart.com/create
+
+Why IL?
+	https://blogs.msdn.microsoft.com/ericlippert/2011/11/18/why-il/
+
+http://craftinginterpreters.com/
+	http://craftinginterpreters.com/contents.html
+	http://gameprogrammingpatterns.com/
+	
+	**** https://cs.lmu.edu/~ray/notes/nasmtutorial/
+	
+// C
+///////////////////////////////////////////////////////////////////
+int func(int i, int j)
+{
+	int k = 10;
+	int l = k * 2 + i - j;
+	
+	int m = 8;
+    int n = 4;
+    int o = 2;
+
+	int result = (i - (j * k + l) * (m - n / o)); // i j k * l + m n o / - * -
+	
+	return result;
+}
+
+void main()
+{
+	int result = func(10, 11);
+}
+///////////////////////////////////////////////////////////////////
+Stack Based:
+int result = (i - (j * k + l) * (m - n / o)); // i j k * l + m n o / - * -
+
+FETCH j
+FETCH K
+MUL
+FETCH l
+ADD
+FETCH n
+FETCH o
+DIV
+FETCH m
+SUB
+MUL
+FETCH i
+SUB
+STORE result
+///////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////
+Register Based:
+											; Assembly
+											; int func(int, int)
+0. 		MOV		EBP, ESP					; Mark 'ESP' as our current STACK frame 'EBP'
+1. 		SUB		ESP, 6						; decrement 'ESP' by num of local function variables(6 => k, l, result, m, n, o)
+
+											; func() implementation starts
+; int k = 10;
+2. 		MOV		[EBP - 1], #10				; save '10' on the 1st local variable pos on the STACK
+
+; int l = k * 2 + i - j;
+3. 		MOV		R0, [EBP - 1]				; save 'k' in R0
+4. 		MOV		R1, #2						; save '2' in R1
+5.		IMUL	R0, R1						; multiply R0 = k * 2
+6. 		MOV		R1, [EBP]					; save 'i' in R1
+7. 		ADD		R0, R1						; add R0 = R0 + j
+8. 		MOV		R1, [EBP + 1]				; save 'j' in R1
+9. 		SUB		R0, R1						; subtract R0 = R0 - j
+10. 	MOV		[EBP-2], R0					; save result into the 2nd local variable pos on to the stack for 'l'
+
+; int m = 8;
+11. 	MOV		[EBP - 3], #8				; save '8' on the 3rd local variable pos on the STACK
+
+; int n = 4;
+12. 	MOV		[EBP - 4], #4				; save '4' on the 4th local variable pos on the STACK
+
+; int o = 2;
+13. 	MOV		[EBP - 5], #2				; save '2' on the 5th local variable pos on the STACK
+
+											; result = (i - (j * k + l) * (m - n / o));
+14. 	MOV 	R0, [EBP + 1]				; R0 = j
+15. 	IMUL	R0, [EBP - 1]				; R0 = j * k
+16. 	ADD		R0, [EBP - 2]				; R0 = (j * k) + l
+17. 	MOV		EAX, [EBP - 4]				; EAX = n
+18. 	IDIV	[EBP - 5]					; EAX = n / o
+19. 	MOV		R2, [EBP - 3]				; R2 = m
+20. 	SUB		R2, EAX						; R2 = m - (n / o) ==> R2 = R2 - EAX
+21. 	IMUL	R0, R2						; (j * k + l) * (m - n / o) ==> R0 * R2
+22. 	MOV		R1, [EBP]					; R1 = i
+23. 	SUB		R1, R0						; i - (j * k + l) * (m - n / o) ==> R1 - R0
+24. 	MOV		[EBP - 6], R1				;
+
+25.		MOV		EAX, [EBP - 6]				; move return value 'result' in 'EAX'
+; <------ EPILOGUE ------>
+26.		MOV		ESP, EBP					; move 'ESP' STACK pointer to 'EBP'
+27.		ADD		ESP, #2						; move 'ESP' by amount equal to the num of function arguments(2 => i, j)
+28.		POP		ESP							; reclaim last STACK Frame's 'ESP'
+29.		POP		EBP							; reclaim last STACK Frame's 'EBP'
+30.		RET									; should do something  similar to 'POP EIP'.
+; </------ EPILOGUE ------>
+											; main()
+											; CALL	#func
+; <------ PROLOGUE ------>
+31. 	PUSH	#34							; push return address onto the STACK
+32. 	PUSH	EBP							; save last STACK Frame's Base Pointer 'EBP'
+33.		PUSH	ESP							; save last STACK Frame's Stack Pointer 'ESP'
+34. 	PUSH	#10							; 1st param for func()
+35. 	PUSH 	#11							; 2nd param for func()
+; </------ PROLOGUE ------>
+36.		JMP		#0							; jump to func() implementation
+37.		HLT									; halt the program
+///////////////////////////////////////////////////////////////////////////////
+
+
+mov <reg>,<reg>
+mov <reg>,<mem>
+mov <mem>,<reg>
+mov <reg>,<const>
+mov <mem>,<const>	
+
+00000001	Rd(4) | Rs(4)
+00000010	.01.10
+00000011	.10.01
+00000100	.01.00
+00000101	.10.00
+
+
+mov eax, DWORD PTR [ebp]
+8 	 B    4    5    0    0
+‭1000 1011 0100 0101 0000 0000‬
+
+mov eax, DWORD PTR [ebp + 1024]
+‭8	 B	  8	   5	0	 0    0    4    0    0    0    0‬
+‭1000 1011 1000 0101 0000 0000 0000 0100 0000 0000 0000 0000‬
+
+mov ebx, DWORD PTR [ebp + 1024]
+		  9	   D
+		  ‭1001 1101‬
+
+mov ebx, DWORD PTR [eax + 1024]
+8b9800040000
+‭1000 1011 1001 1000 0000 0000 0000 0100 0000 0000 0000 0000‬
+<..mov..>
+		  ebx  eax  
+
+		  
+
+***
+Assembly - Quick Guide		  
+	https://www.tutorialspoint.com/assembly_programming/assembly_quick_guide.htm
+	http://flint.cs.yale.edu/cs421/papers/x86-asm/asm.html
+	
+***
+CIS-77 Introduction to Computer Systems
+	http://www.c-jump.com/CIS77/CIS77syllabus.htm
+		Instruction Format Design:
+			http://www.c-jump.com/CIS77/CPU/IsaDesign/lecture.html
+		Encoding Real x86 Instructions:
+			http://www.c-jump.com/CIS77/CPU/x86/lecture.html
+
+***
+Carnegie Mellon University:
+	Computer Architecture:
+		http://www.cs.cmu.edu/afs/cs/academic/class/15349-s02/lectures/
+		Instruction Set Architecture:
+			http://www.cs.cmu.edu/afs/cs/academic/class/15349-s02/lectures/class1b-ISA.pdf
+
+https://www.cirosantilli.com/x86-paging/
+https://en.wikipedia.org/wiki/X86
+
+Online Assembler(s)/Compiler(s):
+	https://godbolt.org/
+	https://www.tutorialspoint.com/compile_assembly_online.php
+	https://www.jdoodle.com/compile-assembler-nasm-online
+
+
+BUS_SIZE : 2(16 bit), 4(32 bit), 8(64 bit)
+Addressing Variables:
+	Function Arguments:
+		SS::EBP::BUS_SIZE + Offset
+	Function Locals:
+		SS::EBP::BUS_SIZE - Offset
+	Member Variables:
+		ES::ECX::{ 1(byte), 2(WORD), 4(DWORD), 8(QWORD)} * MemberVariablePosition
+	Globals:
+		GS::BUS_SIZE * GlobalVariablePosition
+
+		
+https://en.wikibooks.org/wiki/X86_Assembly/GAS_Syntax
+	Operator Suffixes:
+		b = byte (8 bit)
+		s = single (32-bit floating point)
+		w = word (16 bit)
+		l = long (32 bit integer or 64-bit floating point)
+		q = quad (64 bit)
+		t = ten bytes (80-bit floating point)
+		
+	Prefixes:
+		When referencing a register, the register needs to be prefixed with a "%". Constant numbers need to be prefixed with a "$". 
+		
+	Address operand syntax:
+		There are up to 4 parameters of an address operand that are presented in the syntax segment:displacement(base register, index register, scale factor). 
+		This is equivalent to segment:[base register + displacement + index register * scale factor] in Intel syntax.
+
+		The base, index and displacement components can be used in any combination, and every component can be omitted; omitted components are excluded from the calculation above[1][2].
+			movl    -8(%ebp, %edx, 4), %eax  # Full example: load *(ebp + (edx * 4) - 8) into eax
+			movl    -4(%ebp), %eax           # Typical example: load a stack variable into eax
+			movl    (%ecx), %edx             # No index: copy the target of a pointer into a register
+			leal    8(,%eax,4), %eax         # Arithmetic: multiply eax by 4 and add 8
+			leal    (%edx,%eax,2), %eax      # Arithmetic: multiply eax by 2 and add edx
+
+		
+http://www.cs.virginia.edu/~evans/cs216/guides/x86.html
+
+Basic Operands:
+	<const32>
+	<label>
+	<reg>
+	<mem>
+
+				Byte ==>
+				0	 	  	1		  2 		3		  4			5		  6			7		  8			9		  A
+				0000 0000	0000 0000 0000 0000	0000 0000 0000 0000	0000 0000 0000 0000	0000 0000 0000 0000	0000 0000 0000 0000
+Opcode(Hex)																																			Assembly
+										
+	MOVB		0	 0		<--rD---> <--rS--->																										MOV 	%rD, %rS						mov <reg>, <reg>
+				0	 1		<--rD---> <--rS--->																										MOV		%rD, (%rS)						mov <reg>, <mem>
+				0	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					MOV		%rD, (%rA, %rB, Mul)
+				0	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											MOV		%rD, D(%rA, %rB, Mul)
+				
+				0	 4		<--rD---> <--rS--->																										MOV		(%rD), %rS						mov <mem>, <reg>
+				0	 5		<--rA---> <--rB---> <--rS---> <--Mul-->																					MOV		(%rA, %rB, Mul), %rS
+				0	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										MOV		D(%rA, %rB, Mul), %rS
+				
+				0	 7		<--rD---> <------------------K(32)-------------->																		MOV		%rD, CONST(K)					mov <reg>, <const32>
+				0	 8		<--rD---> <------------------K(32)-------------->																		MOV		(%rD), CONST(32)				mov <mem>, <const32>
+				0	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													MOV		(%rA, %rB, Mul), CONST(32)
+				0	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			MOV		D(%rA, %rB, Mul), CONST(32)
+				
+	MOVW		0	 B		<--rD---> <--rS--->																										MOV 	%rD, %rS						mov <reg>, <reg>
+				0	 C		<--rD---> <--rS--->																										MOV		%rD, (%rS)						mov <reg>, <mem>
+				0	 D		<--rD---> <--rA---> <--rB---> <--Mul-->																					MOV		%rD, (%rA, %rB, Mul)
+				0	 E		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											MOV		%rD, D(%rA, %rB, Mul)
+				
+				0	 F		<--rD---> <--rS--->																										MOV		(%rD), %rS						mov <mem>, <reg>
+				1	 0		<--rA---> <--rB---> <--rS---> <--Mul--> 																				MOV		(%rA, %rB, Mul), %rS
+				1	 1		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										MOV		D(%rA, %rB, Mul), %rS
+				
+				1	 2		<--rD---> <------------------K(32)-------------->																		MOV		%rD, CONST(K)					mov <reg>, <const32>
+				1	 3		<--rD---> <------------------K(32)-------------->																		MOV		(%rD), CONST(32)				mov <mem>, <const32>
+				1	 4		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													MOV		(%rA, %rB, Mul), CONST(32)
+				1	 5		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			MOV		D(%rA, %rB, Mul), CONST(32)
+				
+	MOVD		1	 6		<--rD---> <--rS--->																										MOV 	%rD, %rS						mov <reg>, <reg>
+				1	 7		<--rD---> <--rS--->																										MOV		%rD, (%rS)						mov <reg>, <mem>
+				1	 8		<--rD---> <--rA---> <--rB---> <--Mul-->																					MOV		%rD, (%rA, %rB, Mul)
+				1	 9		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											MOV		%rD, D(%rA, %rB, Mul)
+				
+				1	 A		<--rD---> <--rS--->																										MOV		(%rD), %rS						mov <mem>, <reg>
+				1	 B		<--rA---> <--rB---> <--rS---> <--Mul--> 																				MOV		(%rA, %rB, Mul), %rS
+				1	 C		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										MOV		D(%rA, %rB, Mul), %rS
+				
+				1	 D		<--rD---> <------------------K(32)-------------->																		MOV		%rD, CONST(K)					mov <reg>, <const32>
+				1	 E		<--rD---> <------------------K(32)-------------->																		MOV		(%rD), CONST(32)				mov <mem>, <const32>
+				1	 F		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													MOV		(%rA, %rB, Mul), CONST(32)
+				2	 0		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			MOV		D(%rA, %rB, Mul), CONST(32)
+										   X01(1)
+										   X00(2)
+										   X01(4)
+										   X10(8) <== Mul
+										
+										   Addressed Memory:
+										   D(%rA, %rB, Mul) = %rA + %rB * M(ultiplier) + D(isplacement, 32)
+										   
+										   // Examples
+										   // mov %eax, (%ebx) 			/* Load 4 bytes from the memory address in EBX into EAX. */
+										   // mov var(,1), %ebx  		/* Move the contents of EBX into the 4 bytes at memory address var. (Note, var is a 32-bit constant). */
+										   // mov %eax, -4(%esi) 		/* Move 4 bytes at memory address ESI + (-4) into EAX. */
+										   // mov (%esi,%eax,1), %cl     /* Move the contents of CL into the byte at address ESI+EAX. */
+										   // mov %edx, (%esi,%ebx,4)    /* Move the 4 bytes of data at address ESI+4*EBX into EDX. */
+										   // mov %edx, (%esi,%ebx,4,10) /* Move the 4 bytes of data at address ESI+4*EBX+10 into EDX. */
+									  
+	HLT			2	 1																																HLT
+	CALL		2	 2		<------------------K(32)-------------->																					CALL 	<const32>						call <label>
+	RET			2	 3																																RET										ret
+	NOT			2	 4		<--rD--->																												NOT		%rD								not <reg>
+				2	 5		<--rS--->																												NOT		(%rS)							not <mem>
+				2	 6		<--rA---> <--rB---> <--Mul-->																							NOT		(%rA, %rB, Mul)
+				2	 7		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													NOT		D(%rA, %rB, Mul)
+											 // Logically negates the operand contents (that is, flips all bit values in the operand).
+	NEW			2	 8		<--rA--->																												NEW		<--rA--->						new <reg>
+											 // Allocates the number of bytes specified in <--rA---> on the HEAP
+											 // & returns the pointer to it in EAX.
+											 
+	FREE		2	 9		<--rA--->																												FREE	<--rA--->						free <reg>
+											 // Release memory at the address specified in <--rA--->
+											 
+	NEG			2	 A		<--rD--->																												NEG		%rD								neg <reg>
+				2	 B		<--rS--->																												NEG		(%rS)							neg <mem>
+				2	 C		<--rA---> <--rB---> <--Mul-->																							NEG		(%rA, %rB, Mul)
+				2	 D		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													NEG		D(%rA, %rB, Mul)
+											 // Performs the two's complement negation of the operand contents. 
+				
+	NOP			2	 E																																NOP
+				
+	PUSH		3 	 0		<--rS--->																												PUSH	%rS								push <reg>
+				3	 1		<--rS--->																												PUSH	(%rS)							push <mem>
+				3	 2		<--rA---> <--rB---> <--Mul-->																							PUSH	(%rA, %rB, Mul)
+				3	 3		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													PUSH	D(%rA, %rB, Mul)
+				3	 4		<------------------K(32)-------------->																					PUSH	CONST(32)						push <const32>
+											 // Examples
+											 // push %eax — push eax on the stack
+											 // push var(,1) — push the 4 bytes at address var onto the stack
+				
+	POP			3	 5		<--rS--->																												POP		%rS								pop <reg>
+				3	 6		<--rS--->																												POP		(%rS)							pop <mem>
+				3	 7		<--rA---> <--rB---> <--Mul-->																							POP		(%rA, %rB, Mul)
+				3	 8		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													POP		D(%rA, %rB, Mul)
+											 // Examples
+											 // pop %edi — pop the top element of the stack into EDI.
+											 // pop (%ebx) — pop the top element of the stack into memory at the four bytes starting at location EBX. 
+	
+	LEA			4	 0		<--rD---> <--rS--->																										LEA		%rD, (%rS)						lea <reg>, <mem>
+				4	 1		<--rD---> <--rA---> <--rB---> <--Mul-->																					LEA		%rD, (%rA, %rB, Mul)
+				4	 2		<--rD---> <--rA---> <--rB---> <--Mul-->   <------------------D(32)-------------->										LEA		%rD, D(%rA, %rB, Mul)
+											 // Examples
+											 // lea %edi, (%ebx,%esi,8) — the quantity EBX+8*ESI is placed in EDI.
+	
+	ADD			5	 0		<--rD---> <--rS--->																										ADD 	%rD, %rS						add <reg>, <reg>
+				5	 1		<--rD---> <--rS--->																										ADD		%rD, (%rS)						add <reg>, <mem>
+				5	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					ADD		%rD, (%rA, %rB, Mul)
+				5	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											ADD		%rD, D(%rA, %rB, Mul)
+				                                                                                                                                    
+				5	 4		<--rD---> <--rS--->																										ADD		(%rD), %rS						add <mem>, <reg>
+				5	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				ADD		(%rA, %rB, Mul), %rS
+				5	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										ADD		D(%rA, %rB, Mul), %rS
+				                                                                                                                                    
+				5	 7		<--rD---> <------------------K(32)-------------->																		ADD		%rD, CONST(K)					add <reg>, <const32>
+				5	 8		<--rD---> <------------------K(32)-------------->																		ADD		(%rD), CONST(32)				add <mem>, <const32>
+				5	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													ADD		(%rA, %rB, Mul), CONST(32)
+				5	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			ADD		D(%rA, %rB, Mul), CONST(32)
+											 // The add instruction adds together its two operands, storing the result in its 1st operand.
+											 // Note, whereas both operands may be registers, at most one operand may be a memory location. 
+											 // Examples
+											 // add %eax, $10  — EAX is set to EAX + 10
+											 // addb (%eax), $10  — add 10 to the single byte stored at memory address stored in EAX 
+	
+	SUB			6	 0		<--rD---> <--rS--->																										SUB 	%rD, %rS						sub <reg>, <reg>
+				6	 1		<--rD---> <--rS--->																										SUB		%rD, (%rS)						sub <reg>, <mem>
+				6	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					SUB		%rD, (%rA, %rB, Mul)
+				6	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											SUB		%rD, D(%rA, %rB, Mul)
+				                                                                                                                                    
+				6	 4		<--rD---> <--rS--->																										SUB		(%rD), %rS						sub <mem>, <reg>
+				6	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				SUB		(%rA, %rB, Mul), %rS
+				6	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										SUB		D(%rA, %rB, Mul), %rS
+				                                                                                                                                    
+				6	 7		<--rD---> <------------------K(32)-------------->																		SUB		%rD, CONST(K)					sub <reg>, <const32>
+				6	 8		<--rD---> <------------------K(32)-------------->																		SUB		(%rD), CONST(32)				sub <mem>, <const32>
+				6	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													SUB		(%rA, %rB, Mul), CONST(32)
+				6	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			SUB		D(%rA, %rB, Mul), CONST(32)
+	
+	INC			7	 0		<--rD--->																												INC		%rD								inc <reg>
+				7	 1		<--rD--->																												INC		(%rD)							inc <mem>
+				7	 2		<--rA---> <--rB---> <--Mul-->																							INC		(%rA, %rB, Mul)
+				7	 3		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													INC		D(%rA, %rB, Mul)
+											 // incl var(,1) — add one to the 32-bit integer stored at location var
+				     
+	DEC			7	 4		<--rD--->																												DEC		%rD								dec <reg>
+				7	 5		<--rD--->																												DEC		(%rD)							dec <mem>
+				7	 6		<--rA---> <--rB---> <--Mul-->																							DEC		(%rA, %rB, Mul)
+				7	 7		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													DEC		D(%rA, %rB, Mul)
+											 // dec %eax — subtract one from the contents of EAX
+				    
+	IMUL		8	 0		<--rD---> <--rS--->																										IMUL	%rD, %rS						imul <reg>, <reg>
+				8	 1		<--rD---> <--rS--->																										IMUL	%rD, (%rS)						imul <reg>, <mem>
+				8	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					IMUL	%rD, (%rA, %rB, Mul)
+				8	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											IMUL	%rD, D(%rA, %rB, Mul)
+				
+																																															%rD = %rS * CONST(32)
+				8	 4		<--rD---> <--rS---> <------------------K(32)-------------->																IMUL	%rD, %rS, CONST(32)				imul <reg>, <reg>, <con>
+				8	 5		<--rD---> <--rS---> <------------------K(32)-------------->																IMUL	%rD, (%rS), CONST(32)			imul <reg>, <mem>, <con>
+				8	 6		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------K(32)-------------->											IMUL	%rD, (%rA, %rB, Mul), CONST(32)
+				8	 7		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)--------------> <------------------K(32)-------------->	IMUL	%rD, D(%rA, %rB, Mul), CONST(32)
+											 // Integer multiplication:
+											 // The imul instruction has two basic formats: two-operand (first two syntax listings above) and three-operand (last two syntax listings above).
+											 // The two-operand form multiplies its two operands together and stores the result in the first operand. 
+											 // The result (i.e. first) operand must be a register.
+											 // The three operand form multiplies its second and third operands together and stores the result in its last operand. 
+											 // Again, the result operand must be a register. Furthermore, the first operand is restricted to being a constant value. 
+											 // Examples:
+											 //		imul (%ebx), %eax — multiply the contents of EAX by the 32-bit contents of the memory at location EBX. Store the result in EAX.
+											 //		imul $25, %edi, %esi — ESI is set to EDI * 25 
+				
+	IDIV		8	 8		<--rD--->																												IDIV	%rD								idiv <reg>
+				8	 9		<--rD--->																												IDIV	(%rD)							idiv <mem>
+				8	 A		<--rA---> <--rB---> <--Mul-->																							IDIV	(%rA, %rB, Mul)
+				8	 B		<--rA---> <--rB---> <--Mul--> <------------------D(32)-------------->													IDIV	D(%rA, %rB, Mul)
+											 // Integer division:
+											 // 64bit Dividend constructed by EDX:EAX is divided by the Divisor(1st operand)
+											 // Quotient stored in EAX
+											 // Remainder stored in EDX
+											 //  Examples:
+											 //		idiv %ebx — divide the contents of EDX:EAX by the contents of EBX. 
+											 //					Place the quotient in EAX and the remainder in EDX.
+											 //		idivw (%ebx) — divide the contents of EDX:EAS by the 32-bit value stored at the memory location in EBX.
+											 //					   Place the quotient in EAX and the remainder in EDX.
+											
+											
+											 // These instructions perform the specified logical operation (logical bitwise and, or, and exclusive or, respectively) on their operands, 
+											 // placing the result in the first operand location.
+	AND			9	 0		<--rD---> <--rS--->																										AND 	%rD, %rS						and <reg>, <reg>
+				9	 1		<--rD---> <--rS--->																										AND		%rD, (%rS)						and <reg>, <mem>
+				9	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					AND		%rD, (%rA, %rB, Mul)
+				9	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											AND		%rD, D(%rA, %rB, Mul)
+				
+				9	 4		<--rD---> <--rS--->																										AND		(%rD), %rS						and <mem>, <reg>
+				9	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				AND		(%rA, %rB, Mul), %rS
+				9	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										AND		D(%rA, %rB, Mul), %rS
+				
+				9	 7		<--rD---> <------------------K(32)-------------->																		AND		%rD, CONST(K)					and <reg>, <const32>
+				9	 8		<--rD---> <------------------K(32)-------------->																		AND		(%rD), CONST(32)				and <mem>, <const32>
+				9	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													AND		(%rA, %rB, Mul), CONST(32)
+				9	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			AND		D(%rA, %rB, Mul), CONST(32)
+				
+	OR			A	 0		<--rD---> <--rS--->																										OR 		%rD, %rS						or <reg>, <reg>
+				A	 1		<--rD---> <--rS--->																										OR		%rD, (%rS)						or <reg>, <mem>
+				A	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					OR		%rD, (%rA, %rB, Mul)
+				A	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											OR		%rD, D(%rA, %rB, Mul)
+				
+				A	 4		<--rD---> <--rS--->																										OR		(%rD), %rS						or <mem>, <reg>
+				A	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				OR		(%rA, %rB, Mul), %rS
+				A	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										OR		D(%rA, %rB, Mul), %rS
+				
+				A	 7		<--rD---> <------------------K(32)-------------->																		OR		%rD, CONST(K)					or <reg>, <const32>
+				A	 8		<--rD---> <------------------K(32)-------------->																		OR		(%rD), CONST(32)				or <mem>, <const32>
+				A	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													OR		(%rA, %rB, Mul), CONST(32)
+				A	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			OR		D(%rA, %rB, Mul), CONST(32)
+
+	XOR			B	 0		<--rD---> <--rS--->																										XOR 	%rD, %rS						xor <reg>, <reg>
+				B	 1		<--rD---> <--rS--->																										XOR		%rD, (%rS)						xor <reg>, <mem>
+				B	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					XOR		%rD, (%rA, %rB, Mul)
+				B	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											XOR		%rD, D(%rA, %rB, Mul)
+				                                                                                                                                    
+				B	 4		<--rD---> <--rS--->																										XOR		(%rD), %rS						xor <mem>, <reg>
+				B	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				XOR		(%rA, %rB, Mul), %rS
+				B	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										XOR		D(%rA, %rB, Mul), %rS
+				                                                                                                                                    
+				B	 7		<--rD---> <------------------K(32)-------------->																		XOR		%rD, CONST(K)					xor <reg>, <const32>
+				B	 8		<--rD---> <------------------K(32)-------------->																		XOR		(%rD), CONST(32)				xor <mem>, <const32>
+				B	 9		<--rA---> <--rB---> <--Mul--> <------------------K(32)-------------->													XOR		(%rA, %rB, Mul), CONST(32)
+				B	 A		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <------------------K(32)-------------->			XOR		D(%rA, %rB, Mul), CONST(32)
+				
+	SHL			C	 0		<--rD---> <-K(8)->																										SHL		%rD, CONST(8)					shl <reg>, <con8>
+				C	 1		<--rD---> <-K(8)->																										SHL		(%rD), CONST(8)					shl <mem>, <con8>
+				C	 2		<--rA---> <--rB---> <--Mul--> <-K(8)->																					SHL		(%rA, %rB, Mul), CONST(8)
+				C	 3		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <-K(8)->											SHL		D(%rA, %rB, Mul), CONST(8)
+					
+				C	 4		<--rD---> <--rS--->																										SHL		%rD, %rS						shl <reg>, <reg>
+				C	 5		<--rD---> <--rS--->																										SHL		(%rD), %rS						shl <mem>, <reg>
+				C	 6		<--rA---> <--rB---> <--rS---> <--Mul--> 																				SHL		(%rA, %rB, Mul), %rS
+				C	 7		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										SHL		D(%rA, %rB, Mul), %rS
+		
+	SHR			D	 0		<--rD---> <-K(8)->																										SHR		%rD, CONST(8)					shr <reg>, <con8>
+				D	 1		<--rD---> <-K(8)->																										SHR		(%rD), CONST(8)					shr <mem>, <con8>
+				D	 2		<--rA---> <--rB---> <--Mul--> <-K(8)->																					SHR		(%rA, %rB, Mul), CONST(8)
+				D	 3		<--rA---> <--rB---> <--Mul--> <------------------D(32)--------------> <-K(8)->											SHR		D(%rA, %rB, Mul), CONST(8)
+																																					
+				D	 4		<--rD---> <--rS--->																										SHR		%rD, %rS						shr <reg>, <reg>
+				D	 5		<--rD---> <--rS--->																										SHR		(%rD), %rS						shr <mem>, <reg>
+				D	 6		<--rA---> <--rB---> <--rS---> <--Mul--> 																				SHR		(%rA, %rB, Mul), %rS
+				D	 7		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										SHR		D(%rA, %rB, Mul), %rS
+											 // These instructions shift the bits in their first operand's contents left and right, padding the resulting empty bit positions with zeros. 
+											 //	The shifted operand can be shifted up to 31 places. 
+											 // The number of bits to shift is specified by the second operand, which can be either an 8-bit constant or the register CL. 
+											 // In either case, shifts counts of greater then 31 are performed modulo 32. 
+											 //  Examples:
+											 //			shl $1, eax — Multiply the value of EAX by 2 (if the most significant bit is 0)
+											 //			shr %cl, %ebx — Store in EBX the floor of result of dividing the value of EBX by 2n where n is the value in CL. 
+											 //							Caution: for negative integers, it is different from the C semantics of division!
+			
+	JMP			E	 0		<------------------D(32)-------------->																					JMP		<label>
+				E	 1		<------------------D(32)-------------->																					JE		<label>
+				E	 2		<------------------D(32)-------------->																					JNE		<label>
+				E	 3		<------------------D(32)-------------->																					JZ		<label>
+				E	 4		<------------------D(32)-------------->																					JG		<label>
+				E	 5		<------------------D(32)-------------->																					JGE		<label>
+				E	 6		<------------------D(32)-------------->																					JL		<label>
+				E	 7		<------------------D(32)-------------->																					JLE		<label>
+											 // If the contents of EAX are less than or equal to the contents of EBX, jump to the label done. Otherwise, continue to the next instruction.
+											 
+	CMP			F	 0		<--rD---> <--rS--->																										CMP		%rD, %rS						cmp <reg>, <reg>
+				F	 1		<--rD---> <--rS--->																										CMP		%rD, (%rS)						cmp <reg>, <mem>
+				F	 2		<--rD---> <--rA---> <--rB---> <--Mul-->																					CMP		%rD, (%rA, %rB, Mul)
+				F	 3		<--rD---> <--rA---> <--rB---> <--Mul-->	<------------------D(32)-------------->											CMP		%rD, D(%rA, %rB, Mul)
+				
+				F	 4		<--rD---> <--rS--->																										CMP		(%rS), %rS						cmp <mem>, <reg>
+				F	 5		<--rA---> <--rB---> <--rS---> <--Mul--> 																				CMP		(%rA, %rB, Mul), %rS
+				F	 6		<--rA---> <--rB---> <--rS---> <--Mul--> <------------------D(32)--------------> 										CMP		D(%rA, %rB, Mul), %rS
+				
+				F	 7		<------------------K(32)--------------> <--rS---> 																		CMP		CONST(32), %rS					cmp <const32>, <reg>
+											 // Compare the values of the two specified operands, setting the condition codes in the machine status word appropriately.
+											 // This instruction is equivalent to the sub instruction, except the result of the subtraction is discarded instead of replacing the first operand. 
+	
+	
+	
+	
+	

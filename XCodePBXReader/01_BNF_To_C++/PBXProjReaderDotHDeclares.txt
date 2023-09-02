@@ -1,0 +1,13 @@
+		
+		void 													read(const char* sFile);
+		
+		PBXParseHelper*											GetPBXParserHelper()
+		{
+			return m_pPBXParseHelper.get();
+		}
+	protected:							
+									
+	private:							
+		std::unique_ptr<PBXParseHelper>							m_pPBXParseHelper = std::make_unique<PBXParseHelper>();
+
+		PBXHelper*												m_pPBXHelper = PBXHelper::getInstance();

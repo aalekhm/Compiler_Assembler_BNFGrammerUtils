@@ -1,0 +1,28 @@
+#include "PBXProjReader.h"
+#include "GrammerUtils.h"
+
+#define SAVE_CURRENT_TOKEN											GrammerUtils::m_pSavedToken = GrammerUtils::m_pToken;
+#define SAVE_PREV_TOKEN												GrammerUtils::m_pSavedToken = GrammerUtils::m_pPrevToken;
+
+#define SAVED_TOKEN 												GrammerUtils::m_pSavedToken
+#define SAVED_TOKEN_TEXT 											GrammerUtils::m_pSavedToken.getText()
+#define PREV_TOKEN 													GrammerUtils::m_pPrevToken
+#define PREV_TOKEN_TEXT 											GrammerUtils::m_pPrevToken.getText()
+
+PBXProjReader::PBXProjReader()
+{
+	GrammerUtils::init();
+}
+
+void PBXProjReader::read(const char* sFile)
+{
+	//////////////// THIS PIECE OF CODE WILL REMAIN COMMON FOR ALL //////////////////
+	if (GrammerUtils::read(sFile))
+	{
+		addKeywords();
+		GrammerUtils::getNextToken();
+
+		def();
+	}
+	/////////////////////////////////////////////////////////////////////////////////
+}

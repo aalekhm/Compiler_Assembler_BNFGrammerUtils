@@ -24,8 +24,8 @@ int main()
 			while (st->hasMoreTokens())
 			{
 				Token tok = st->nextToken();
-				if(	!(tok.getType() == TokenType::Type::TK_EOL || tok.getType() == TokenType::Type::TK_WHITESPACE) )
-					std::cout << "Token :: " << TokenType::toString(tok.getType()) << "\t" << tok.getText() << std::endl;
+				if(	!(tok.getType() == TokenType_::Type::TK_EOL || tok.getType() == TokenType_::Type::TK_WHITESPACE) )
+					std::cout << "Token :: " << TokenType_::toString(tok.getType()) << "\t" << tok.getText() << std::endl;
 			}
 		}
 		

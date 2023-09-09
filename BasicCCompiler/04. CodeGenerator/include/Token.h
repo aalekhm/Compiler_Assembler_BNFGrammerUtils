@@ -4,6 +4,7 @@
 #include <map>
 #include <assert.h>
 #include <iterator>
+#include <memory>
 
 #define NOT !
 #define GET_INFO_FOR_KEY(__node__, __key__)					__node__->getAdditionalInfoFor(__key__)
@@ -674,7 +675,7 @@ typedef struct InterfaceInfo
 		m_sInterfaceName = GET_INFO_FOR_KEY(pNode, "text");
 	}
 
-	void updateInterfaceList(std::map<std::string, InterfaceInfo*> mapGlobalInterfaces)
+	void updateInterfaceList(std::map<std::string, std::unique_ptr<InterfaceInfo>>& mapGlobalInterfaces)
 	{
 		// Check if the interface extends any "interface"s !
 		Tree* pStructImplementsListNode = m_pNode->m_pRightNode;
@@ -684,7 +685,7 @@ typedef struct InterfaceInfo
 			for (Tree* pStringNode : pStructImplementsListNode->m_vStatements)
 			{
 				std::string sInterfaceName = GET_INFO_FOR_KEY(pStringNode, "text");
-				InterfaceInfo* pInterfaceInfo = mapGlobalInterfaces[sInterfaceName];
+				InterfaceInfo* pInterfaceInfo = mapGlobalInterfaces[sInterfaceName].get();
 				assert(pInterfaceInfo != nullptr);
 				if (pInterfaceInfo != nullptr)
 				{
@@ -780,13 +781,13 @@ typedef struct StructInfo
 		return iReturnOffset;
 	}
 
-	void updateParent(std::map<std::string, StructInfo*> mapGlobalStructs)
+	void updateParent(std::map<std::string, std::unique_ptr<StructInfo>>& mapGlobalStructs)
 	{
 		// Check if it inherits any Parent Struct
 		std::string sStructParentName = GET_INFO_FOR_KEY(m_pNode, "extends");
 		if (NOT sStructParentName.empty())
 		{
-			StructInfo* pParentStructInfo = mapGlobalStructs[sStructParentName];
+			StructInfo* pParentStructInfo = mapGlobalStructs[sStructParentName].get();
 			assert(pParentStructInfo != nullptr);
 			if (pParentStructInfo != nullptr)
 			{
@@ -795,7 +796,7 @@ typedef struct StructInfo
 		}
 	}
 
-	void updateInterfaceList(std::map<std::string, InterfaceInfo*> mapGlobalInterfaces)
+	void updateInterfaceList(std::map<std::string, std::unique_ptr<InterfaceInfo>>& mapGlobalInterfaces)
 	{
 		// Check if the struct implements any "interfaces" !
 		Tree* pStructImplementsListNode = m_pNode->m_pRightNode;
@@ -805,7 +806,7 @@ typedef struct StructInfo
 			for (Tree* pStringNode : pStructImplementsListNode->m_vStatements)
 			{
 				std::string sInterfaceName = GET_INFO_FOR_KEY(pStringNode, "text");
-				InterfaceInfo* pInterfaceInfo = mapGlobalInterfaces[sInterfaceName];
+				InterfaceInfo* pInterfaceInfo = mapGlobalInterfaces[sInterfaceName].get();
 				assert(pInterfaceInfo != nullptr);
 				if (pInterfaceInfo != nullptr)
 				{

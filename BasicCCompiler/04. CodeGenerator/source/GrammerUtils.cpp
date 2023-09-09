@@ -20,15 +20,15 @@ StringTokenizer*						GrammerUtils::m_pStrTok = NULL;
 int										GrammerUtils::iTabCount = 0;
 std::vector<std::string>				GrammerUtils::m_vStrings;
 int8_t									GrammerUtils::m_iByteCode[MAX_BYTECODE_SIZE];
-std::map<std::string, FunctionInfo*>	GrammerUtils::m_MapGlobalFunctions;
-std::map<std::string, StructInfo*>		GrammerUtils::m_MapGlobalStructs;
-std::map<std::string, InterfaceInfo*>	GrammerUtils::m_MapGlobalInterfaces;
+std::map<std::string, std::unique_ptr<FunctionInfo>>	GrammerUtils::m_MapGlobalFunctions;
+std::map<std::string, std::unique_ptr<StructInfo>>		GrammerUtils::m_MapGlobalStructs;
+std::map<std::string, std::unique_ptr<InterfaceInfo>>	GrammerUtils::m_MapGlobalInterfaces;
 std::map<std::string, Tree*>			GrammerUtils::m_MapSystemFunctions;
 FunctionInfo*							GrammerUtils::m_pCurrentFunction;
 StructInfo*								GrammerUtils::m_pCurrentStruct;
 InterfaceInfo*							GrammerUtils::m_pCurrentInterface;
-ByteArrayOutputStream*					GrammerUtils::m_pBAOS;
-ByteArrayInputStream*					GrammerUtils::m_pBAIS;
+std::unique_ptr<ByteArrayOutputStream>	GrammerUtils::m_pBAOS;
+std::unique_ptr<ByteArrayInputStream>	GrammerUtils::m_pBAIS;
 
 std::vector<Tree*>						FunctionInfo::m_vStaticVariables;
 HANDLE									GrammerUtils::m_HColor;
@@ -1036,8 +1036,8 @@ void GrammerUtils::printAST(Tree* pNode, bool bPrintTabs/* = true*/)
 
 void GrammerUtils::generateCode(Tree* pRootNode)
 {
-	m_pBAOS = new ByteArrayOutputStream(m_iByteCode, MAX_BYTECODE_SIZE);
-	m_pBAIS = new ByteArrayInputStream(m_iByteCode, MAX_BYTECODE_SIZE);
+	m_pBAOS = std::make_unique<ByteArrayOutputStream>(m_iByteCode, MAX_BYTECODE_SIZE);
+	m_pBAIS = std::make_unique<ByteArrayInputStream>(m_iByteCode, MAX_BYTECODE_SIZE);
 
 	printAST(pRootNode);
 
@@ -1086,11 +1086,11 @@ void GrammerUtils::generateCode(Tree* pRootNode)
 
 		//////////////////////////////////////////////////////////////////////////////
 		// Map main() jump offset.
-		std::map<std::string, FunctionInfo*>::const_iterator itrFuncMain = m_MapGlobalFunctions.find("main");
+		auto itrFuncMain = m_MapGlobalFunctions.find("main");
 		assert(itrFuncMain != m_MapGlobalFunctions.end());
 		if (itrFuncMain != m_MapGlobalFunctions.end())
 		{
-			FunctionInfo* pMainFuncInfo = (FunctionInfo*)itrFuncMain->second;
+			FunctionInfo* pMainFuncInfo = (FunctionInfo*)itrFuncMain->second.get();
 
 			EMIT_INT_ATPOS(pMainFuncInfo->m_iStartOffsetInCode, iJumpMainOffsetHole);
 #if (VERBOSE == 1)
@@ -1582,13 +1582,14 @@ int	GrammerUtils::getStringPosition(const char* sString)
 
 void GrammerUtils::handleInterfaceDef(Tree* pNode)
 {
-	m_pCurrentInterface = new InterfaceInfo(pNode);
+	std::unique_ptr<InterfaceInfo> pCurrentInterface = std::make_unique<InterfaceInfo>(pNode);
 	if (m_pCurrentInterface != nullptr)
 	{
 		// Save in Global Map
 		std::string sInterfaceName = GET_INFO_FOR_KEY(pNode, "text");
-		m_MapGlobalInterfaces[sInterfaceName] = m_pCurrentInterface;
+		m_MapGlobalInterfaces[sInterfaceName] = std::move(pCurrentInterface);
 
+		m_pCurrentInterface = m_MapGlobalInterfaces[sInterfaceName].get();
 		m_pCurrentInterface->updateInterfaceList(m_MapGlobalInterfaces);
 	}
 }
@@ -1600,12 +1601,14 @@ void GrammerUtils::handleInterfaceEnd(Tree* pNode)
 
 void GrammerUtils::handleStructDef(Tree* pNode)
 {
-	m_pCurrentStruct = new StructInfo(pNode);
-	if (m_pCurrentStruct != nullptr)
+	std::unique_ptr<StructInfo> pCurrentStruct = std::make_unique<StructInfo>(pNode);
+	if (pCurrentStruct != nullptr)
 	{
 		// Save in Global Map
 		std::string sStructName = GET_INFO_FOR_KEY(pNode, "text");
-		m_MapGlobalStructs[sStructName] = m_pCurrentStruct;
+		m_MapGlobalStructs[sStructName] = std::move(pCurrentStruct);
+
+		m_pCurrentStruct = m_MapGlobalStructs[sStructName].get();
 
 		m_pCurrentStruct->updateParent(m_MapGlobalStructs);
 		m_pCurrentStruct->updateInterfaceList(m_MapGlobalInterfaces);
@@ -1669,9 +1672,9 @@ void GrammerUtils::addVirtualFunctionsFromParentStruct(StructInfo* pCurrentStruc
 	
 	// 1. Check "virtual" function in the CURRENT struct & add them to the LIST.
 	{
-		for (int32_t i = 0; i < pCurrentStruct->m_vMemberFunctions.size(); i++)
+		for (void* pVoidPtrMemberFuncs : pCurrentStruct->m_vMemberFunctions)
 		{
-			FunctionInfo* pCURRENTSTRUCT_FunctionInfo = (FunctionInfo*)pCurrentStruct->m_vMemberFunctions.at(i);
+			FunctionInfo* pCURRENTSTRUCT_FunctionInfo = (FunctionInfo*)pVoidPtrMemberFuncs;
 			if (pCURRENTSTRUCT_FunctionInfo != nullptr)
 			{
 				std::string sVirtual = GET_INFO_FOR_KEY(pCURRENTSTRUCT_FunctionInfo->m_pNode, "isVirtual");
@@ -2124,7 +2127,10 @@ void GrammerUtils::handleFunctionDef(Tree* pNode)
 	Tree* pReturnTypeNode = pNode->m_pLeftNode;
 	Tree* pArgListNode = pNode->m_pRightNode;
 
-	m_pCurrentFunction = new FunctionInfo(pNode, CURRENT_OFFSET);
+	std::unique_ptr<FunctionInfo> pCurrentFunction = std::make_unique<FunctionInfo>(pNode, CURRENT_OFFSET);
+	m_MapGlobalFunctions[sFuncName] = std::move(pCurrentFunction);
+	m_pCurrentFunction = m_MapGlobalFunctions[sFuncName].get();
+
 	if (m_pCurrentFunction != nullptr)
 	{
 		if (m_pCurrentStruct != nullptr)
@@ -2139,10 +2145,6 @@ void GrammerUtils::handleFunctionDef(Tree* pNode)
 		{
 			m_pCurrentInterface->addFunction(m_pCurrentFunction);			// Add the function() a part of the Struct.
 			m_pCurrentFunction->setParentInterface(m_pCurrentInterface);				// Make Struct as this function()'s parent.
-		}
-		else
-		{
-			m_MapGlobalFunctions[sFuncName] = m_pCurrentFunction;
 		}
 
 		m_pCurrentFunction->updateFunctionSignature();
@@ -2162,9 +2164,8 @@ void GrammerUtils::handleFunctionStart(Tree* pNode)
 	std::cout << "(";
 	if (m_pCurrentFunction->getArgumentsCount())
 	{
-		for (int i = 0; i < m_pCurrentFunction->m_pFunctionArguments->m_vStatements.size(); i++)
+		for (Tree* pArgNode : m_pCurrentFunction->m_pFunctionArguments->m_vStatements)
 		{
-			Tree* pArgNode = m_pCurrentFunction->m_pFunctionArguments->m_vStatements.at(i);
 			std::cout << GET_INFO_FOR_KEY(pArgNode, "text") << ", ";
 		}
 	}
@@ -2223,7 +2224,7 @@ FunctionInfo* GrammerUtils::getFunctionInfo(Tree* pNode)
 		if (NOT sType.empty())
 		{
 LABEL1:
-			StructInfo* pStructInfo = m_MapGlobalStructs[sType];
+			StructInfo* pStructInfo = m_MapGlobalStructs[sType].get();
 			if (pStructInfo != nullptr)
 			{
 				if (pStructInfo != nullptr)
@@ -2267,10 +2268,9 @@ LABEL1:
 		// 2. Check if its a global function().
 		if (pRETURN_FunctionInfo == nullptr)
 		{
-			std::map<std::string, FunctionInfo*>::const_iterator itrFunction = m_MapGlobalFunctions.begin();
-			for (; itrFunction != m_MapGlobalFunctions.end(); ++itrFunction)
+			for (auto itrFunction = m_MapGlobalFunctions.begin(); itrFunction != m_MapGlobalFunctions.end(); ++itrFunction)
 			{
-				FunctionInfo* pFunctionInfo = itrFunction->second;
+				FunctionInfo* pFunctionInfo = itrFunction->second.get();
 				if (pFunctionInfo != nullptr)
 				{
 					std::string sFUNCDEF_Name = pFunctionInfo->m_sFunctionName;
@@ -2322,8 +2322,7 @@ void GrammerUtils::handleSystemFunctionCall(Tree* pNode)
 	{
 		//////////////////////////////////////////////////////
 		// I. Push arguments onto the stack...
-		std::vector<Tree*>::reverse_iterator rItr = pCALLEE_Node->m_vStatements.rbegin();
-		for (; rItr != pCALLEE_Node->m_vStatements.rend(); ++rItr)
+		for (auto rItr = pCALLEE_Node->m_vStatements.rbegin(); rItr != pCALLEE_Node->m_vStatements.rend(); ++rItr)
 		{
 			Tree* pArgNode = *rItr;
 			if (pArgNode->m_eASTNodeType != ASTNodeType::ASTNode_SYSTEMFUNCTIONCALLEND)
@@ -2418,8 +2417,7 @@ void GrammerUtils::handleFunctionCall(Tree* pNode)
 			{
 				//////////////////////////////////////////////////////
 				// I. Push arguments onto the stack...
-				std::vector<Tree*>::reverse_iterator rItr = pCALLEE_Node->m_vStatements.rbegin();
-				for (; rItr != pCALLEE_Node->m_vStatements.rend(); ++rItr)
+				for (auto rItr = pCALLEE_Node->m_vStatements.rbegin(); rItr != pCALLEE_Node->m_vStatements.rend(); ++rItr)
 				{
 					Tree* pArgNode = *rItr;
 					if (pArgNode->m_eASTNodeType != ASTNodeType::ASTNode_FUNCTIONCALLEND)
@@ -2567,7 +2565,7 @@ bool GrammerUtils::isFloatingPointExpression(std::string sExpr)
 					sStructType = m_pCurrentStruct->m_sStructName;
 				else
 					sStructType = GET_VARIABLE_NODETYPE(sObjectName);
-				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType];
+				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType].get();
 				assert(pStructInfo != nullptr);
 				if (pStructInfo != nullptr)
 				{
@@ -2746,7 +2744,7 @@ void GrammerUtils::handleExpression(Tree* pNode)
 					sStructType = m_pCurrentStruct->m_sStructName;
 				else	
 					sStructType = GET_VARIABLE_NODETYPE(sObjectName);
-				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType];
+				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType].get();
 				assert(pStructInfo != nullptr);
 				if (pStructInfo != nullptr)
 				{
@@ -3167,7 +3165,7 @@ void GrammerUtils::handleAssign(Tree* pNode)
 				{
 					sStructType = GET_VARIABLE_NODETYPE(sObjectName);
 				}
-				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType];
+				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType].get();
 				assert(pStructInfo != nullptr);
 				if (pStructInfo != nullptr)
 				{
@@ -3207,7 +3205,7 @@ void GrammerUtils::handleAssign(Tree* pNode)
 				{
 					sStructType = GET_VARIABLE_NODETYPE(sObjectName);
 				}
-				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType];
+				StructInfo* pStructInfo = m_MapGlobalStructs[sStructType].get();
 				assert(pStructInfo != nullptr);
 				if (pStructInfo != nullptr)
 				{
@@ -3842,7 +3840,7 @@ void GrammerUtils::handleStructMemberAccessDeref(Tree* pNode)
 			sStructType = m_pCurrentStruct->m_sStructName;
 		else
 			sStructType = GET_VARIABLE_NODETYPE(sObjectName);
-		pStructInfo = m_MapGlobalStructs[sStructType];
+		pStructInfo = m_MapGlobalStructs[sStructType].get();
 		assert(pStructInfo != nullptr);
 		if (pStructInfo != nullptr)
 		{
@@ -3877,11 +3875,8 @@ void GrammerUtils::handleStructMemberAccessDeref(Tree* pNode)
 
 void GrammerUtils::handleStatements(Tree* pNode)
 {
-	int32_t iCount = 0;
-	for(; iCount < pNode->m_vStatements.size(); iCount++)
+	for(Tree* pChildNode : pNode->m_vStatements)
 	{
-		Tree* pChildNode = pNode->m_vStatements.at(iCount);
-
 		////////////////////////////////////////////////////////////////////////////
 		if (pNode->m_eASTNodeType == ASTNodeType::ASTNode_FUNCTIONCALL || pNode->m_eASTNodeType == ASTNodeType::ASTNode_SYSTEMFUNCTIONCALL)
 		{
@@ -3962,13 +3957,12 @@ int32_t GrammerUtils::sizeOf(std::string sType)
 		return sizeof(float);
 	else
 	{
-		std::map<std::string, StructInfo*>::const_iterator itrStruct = m_MapGlobalStructs.begin();
-		for (; itrStruct != m_MapGlobalStructs.end(); ++itrStruct)
+		for(auto itrStruct = m_MapGlobalStructs.begin(); itrStruct != m_MapGlobalStructs.end(); ++itrStruct)
 		{
 			std::string sStructName = itrStruct->first;
 			if (sStructName == sType)
 			{
-				StructInfo* pStructInfo = itrStruct->second;
+				StructInfo* pStructInfo = itrStruct->second.get();
 				return pStructInfo->sizeOf();
 			}
 		}
@@ -4125,7 +4119,7 @@ StructInfo* GrammerUtils::getStructByName(std::string sObjectName)
 	StructInfo* pStructInfo = nullptr;
 	if (NOT sObjectName.empty())
 	{
-		pStructInfo = m_MapGlobalStructs[sObjectName];
+		pStructInfo = m_MapGlobalStructs[sObjectName].get();
 	}
 
 	return pStructInfo;
@@ -4150,8 +4144,7 @@ std::string GrammerUtils::getMemberTypeInStructHierarchy(std::string sMemberVari
 FunctionInfo* GrammerUtils::getFunctionByNameInStruct(std::string sFunctionName, StructInfo* pStructInfo)
 {
 	FunctionInfo* bReturnFunctionInfo = nullptr;
-	std::vector<void*>::const_iterator pFunctionItr = pStructInfo->m_vMemberFunctions.cbegin();
-	for (; pFunctionItr != pStructInfo->m_vMemberFunctions.cend(); ++pFunctionItr)
+	for (auto pFunctionItr = pStructInfo->m_vMemberFunctions.cbegin(); pFunctionItr != pStructInfo->m_vMemberFunctions.cend(); ++pFunctionItr)
 	{
 		FunctionInfo* pFunctionInfo = (FunctionInfo*)*pFunctionItr;
 		if (pFunctionInfo->m_sFunctionName == sFunctionName)
@@ -4168,12 +4161,12 @@ FunctionInfo* GrammerUtils::getGlobalFunctionByName(std::string sFuncName)
 {
 	FunctionInfo* bReturnFunctionInfo = nullptr;
 
-	std::map<std::string, FunctionInfo*>::const_iterator itrFunc = m_MapGlobalFunctions.find(sFuncName.c_str());
+	auto itrFunc = m_MapGlobalFunctions.find(sFuncName.c_str());
 	assert(itrFunc != m_MapGlobalFunctions.end());
 	if (itrFunc == m_MapGlobalFunctions.end())
 		return nullptr;
 
-	return itrFunc->second;
+	return itrFunc->second.get();
 }
 
 Tree* GrammerUtils::getSystemFunctionByName(std::string sSystemFuncName)
@@ -4213,16 +4206,16 @@ bool GrammerUtils::isStructObedient(StructInfo* pStructInfo)
 			std::copy(vInterfaceFunctionList.begin(), vInterfaceFunctionList.end(), std::back_inserter(vImplementFunctionList));
 		}
 
-		std::vector<void*>::iterator itrInterfaceList = vImplementFunctionList.begin();
-		for (; itrInterfaceList != vImplementFunctionList.end(); ++itrInterfaceList)
+		for (auto itrInterfaceList = vImplementFunctionList.begin(); itrInterfaceList != vImplementFunctionList.end(); ++itrInterfaceList)
 		{
 			FunctionInfo* pInterfaceFunctionInfo = (FunctionInfo*)*itrInterfaceList;
 			std::string sInterfaceFunctionSign = pInterfaceFunctionInfo->m_sFunctionSignature;
 			{
 				bool bHasImplemented = false;
-				std::vector<void*>::iterator itrStructFunctionList = pStructInfo->m_vMemberFunctions.begin();
-				for (; itrStructFunctionList != pStructInfo->m_vMemberFunctions.end(); ++itrStructFunctionList)
-				{
+				for (	auto itrStructFunctionList = pStructInfo->m_vMemberFunctions.begin(); 
+						itrStructFunctionList != pStructInfo->m_vMemberFunctions.end(); 
+						++itrStructFunctionList
+				) {
 					FunctionInfo* pStructFunctionInfo = (FunctionInfo*)*itrStructFunctionList;
 					std::string sStructFunctionSign = pStructFunctionInfo->m_sFunctionSignature;
 					if (sInterfaceFunctionSign == sStructFunctionSign)

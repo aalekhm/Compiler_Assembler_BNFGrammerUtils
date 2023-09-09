@@ -67,6 +67,6 @@ MetaFunction* GetFunctionByName(const char* sFunctionName)
 }
 
 #define META_REGISTER_FUN(f) \
-	MetaFunction g_MetaFunction_##f(#f, f);
+	MetaFunction g_MetaFunction_##f(#f, f)
 
 #define META_REGISTER_FUN_(f, fs) MetaFunction g_MetaFunction_##f(fs, f)

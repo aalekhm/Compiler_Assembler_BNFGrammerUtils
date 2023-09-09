@@ -6,6 +6,7 @@
 #include "RandomAccessFile.h"
 #include "StringTokenizer.h"
 #include "Token.h"
+#include <memory>
 
 #define OPTIONAL_			0
 #define MANDATORY_			1
@@ -153,14 +154,14 @@ class GrammerUtils
 
 		static int8_t								m_iByteCode[MAX_BYTECODE_SIZE];
 
-		static ByteArrayOutputStream*				m_pBAOS;
-		static ByteArrayInputStream*				m_pBAIS;
+		static std::unique_ptr<ByteArrayOutputStream>	m_pBAOS;
+		static std::unique_ptr<ByteArrayInputStream>	m_pBAIS;
 
-		static void*								m_HColor;
+		static HANDLE								m_HColor;
 	public:
-		static std::map<std::string, FunctionInfo*>	m_MapGlobalFunctions;
-		static std::map<std::string, StructInfo*>	m_MapGlobalStructs;
-		static std::map<std::string, InterfaceInfo*>m_MapGlobalInterfaces;
+		static std::map<std::string, std::unique_ptr<FunctionInfo>>		m_MapGlobalFunctions;
+		static std::map<std::string, std::unique_ptr<StructInfo>>		m_MapGlobalStructs;
+		static std::map<std::string, std::unique_ptr<InterfaceInfo>>	m_MapGlobalInterfaces;
 
 		static bool									isABuiltInType(const char* cStr);
 		static bool									isAKeyword(const char* cStr);

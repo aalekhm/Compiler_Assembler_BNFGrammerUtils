@@ -9,6 +9,10 @@
 #include "meta/luaRegister.h"
 #include "example/luaGL.h"
 
+#if defined _M_X64
+#error "This code should not be compiled on x64. Use x86 instead"
+#endif
+
 void error(lua_State *L, const char *fmt, ...) {
 	va_list argp;
 	va_start(argp, fmt);

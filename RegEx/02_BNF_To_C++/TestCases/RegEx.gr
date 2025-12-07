@@ -1,0 +1,21 @@
+
+<def>							::= 	<PARSE_EXPRESSION>;
+
+<PARSE_GROUP>				::=		'(' <PARSE_EXPRESSION> ')' ;
+
+<CHARACTER_CLASS>				::=		'[' { TK_CHARACTER } ']' ;
+
+<PARSE_PRIMARY>					::= 	( '.' | TK_CHARACTER | <CHARACTER_CLASS> | <PARSE_GROUP> ) ;
+
+<PARSE_QUANTIFIERS>				::= 	( '*' | '+' | '?' ) ;
+
+<PARSE_FACTOR>					::=		<PARSE_PRIMARY> [ <PARSE_QUANTIFIERS> ] ;
+
+<PARSE_TERM>					::=		{ <PARSE_FACTOR> } ;
+
+<PARSE_EXPRESSION>				::= 	<PARSE_TERM> { '|' <PARSE_EXPRESSION> } ;
+
+
+<PRIMARY>						::= 	( '.' | TK_CHARACTER ) ;
+<EXPR>							::= 	{ ( <PARSE_SEQUENCE> | <PARSE_QUANTIFIERS> ) } 
+<PARSE_SEQUENCE>				::= 	( <PRIMARY> | <CHARACTER_CLASS> | <PARSE_GROUP> ) 

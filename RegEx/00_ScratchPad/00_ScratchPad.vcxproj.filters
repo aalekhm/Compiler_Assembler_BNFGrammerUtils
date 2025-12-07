@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{7ab94bc8-3acc-4ae7-90c8-92e823c9e0e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{26abdfa3-c8f1-4d62-a8a6-0c4fbda0a1b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\IO">
+      <UniqueIdentifier>{f68e797a-c14c-47cc-ad0d-d58de1bb5bcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\IO">
+      <UniqueIdentifier>{17467e59-ae72-4ec1-90d8-af4c93e27276}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\IO\Buffer">
+      <UniqueIdentifier>{e89b1b4a-2755-48ca-b724-7bd7e690668b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\IO\Buffer">
+      <UniqueIdentifier>{70ddbc71-fb79-4012-bc48-44938cba178a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IO\RandomAccessFile.cpp">
+      <Filter>src\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IO\Buffer\BufferedStreamReader.cpp">
+      <Filter>src\IO\Buffer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IO\Buffer\BufferedStreamWriter.cpp">
+      <Filter>src\IO\Buffer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\IO\Buffer\BufferData.hpp">
+      <Filter>include\IO\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\IO\Buffer\BufferedStreamReader.h">
+      <Filter>include\IO\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\IO\Buffer\BufferedStreamWriter.h">
+      <Filter>include\IO\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="include\IO\RandomAccessFile.h">
+      <Filter>include\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Defines.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

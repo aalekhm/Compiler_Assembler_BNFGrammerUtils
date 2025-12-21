@@ -76,6 +76,8 @@ namespace TokenType_
 		TK_MEMBERACCESS,
 		TK_STATICMEMBERACCESS,
 		TK_SYSTEMFUNCTIONCALL,
+		TK_CALLINGFUNCAARGSWITHCONTENT,
+		TK_FUNCARGLIST,
 		TK_UNKNOWN
 	};
 
@@ -146,6 +148,9 @@ namespace TokenType_
 			case Type::TK_MEMBERACCESS:			return "TK_MEMBERACCESS";
 			case Type::TK_STATICMEMBERACCESS:	return "TK_STATICMEMBERACCESS";
 			case Type::TK_SYSTEMFUNCTIONCALL:	return "TK_SYSTEMFUNCTIONCALL";
+			case Type::TK_CALLINGFUNCAARGSWITHCONTENT:	
+												return "TK_CALLINGFUNCAARGSWITHCONTENT";
+			case Type::TK_FUNCARGLIST:			return "TK_FUNCARGLIST";
 
 			case Type::TK_UNKNOWN:				return "TK_UNKNOWN";
 		}
@@ -217,6 +222,9 @@ namespace TokenType_
 		else if(sTokenType == "TK_MEMBERACCESS")		return Type::TK_MEMBERACCESS;
 		else if (sTokenType == "TK_STATICMEMBERACCESS")	return Type::TK_STATICMEMBERACCESS;
 		else if (sTokenType == "TK_SYSTEMFUNCTIONCALL")	return Type::TK_SYSTEMFUNCTIONCALL;
+		else if (sTokenType == "TK_CALLINGFUNCAARGSWITHCONTENT")	
+														return Type::TK_CALLINGFUNCAARGSWITHCONTENT;
+		else if (sTokenType == "TK_FUNCARGLIST")		return Type::TK_FUNCARGLIST;
 
 		else if(sTokenType == "TK_UNKNOWN")				return Type::TK_UNKNOWN;
 		else											return Type::TK_INVALID;

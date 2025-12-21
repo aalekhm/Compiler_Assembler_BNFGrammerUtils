@@ -1,21 +1,247 @@
 
-<def>							::= 	<PARSE_EXPRESSION>;
+<def>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::= 	"<callingFuncArgsWithContent>"
+										pReturnNode##
+									"</callingFuncArgsWithContent>"
+									<PARSE_EXPRESSION>;
 
-<PARSE_GROUP>				::=		'(' <PARSE_EXPRESSION> ')' ;
+<PARSE_EXPRESSION>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::= 	"<code>"
+										std::shared_ptr<ASTNode> pLeftNode;
+										std::shared_ptr<ASTNode> pRightNode;
+									"</code>"
+									"<callingFuncArgsWithContent>"
+										pLeftNode##
+									"</callingFuncArgsWithContent>"
+									<PARSE_TERM>
+									[
+										"<callingFuncArgsWithContent>"
+											pRightNode##pReturnNode = pLeftNode;
+										"</callingFuncArgsWithContent>"
+										<ALTERNATE_EXPRESSION>
+										"<code>"
+											std::shared_ptr<ASTNode> pAlternateASTNode = std::make_shared<AlternationASTNode>(pLeftNode, pRightNode);
+											pReturnNode = pAlternateASTNode;
+										"</code>"
+									] ;
 
-<CHARACTER_CLASS>				::=		'[' { TK_CHARACTER } ']' ;
+<ALTERNATE_EXPRESSION>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::= 	'|'
+									"<callingFuncArgsWithContent>"
+										pReturnNode##
+									"</callingFuncArgsWithContent>"
+									<PARSE_EXPRESSION> ;
+		
+<PARSE_TERM>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		"<code>"
+										std::shared_ptr<SequenceASTNode> pSequenceASTNode = std::make_shared<SequenceASTNode>();
+									"</code>"
+									{
+										"<code>"
+											std::shared_ptr<ASTNode> pFactorNode;
+										"</code>"
+										"<callingFuncArgsWithContent>"
+											pFactorNode##pSequenceASTNode->addChild(pFactorNode);
+										"</callingFuncArgsWithContent>"
+										<PARSE_FACTOR> 
+									} 
+									"<code>"
+										pReturnNode = pSequenceASTNode;
+									"</code>"
+									;
+		
+<PARSE_FACTOR>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		"<code>"
+										std::shared_ptr<ASTNode> pPrimaryNode;
+									"</code>"
+									"<callingFuncArgsWithContent>"
+										pPrimaryNode##
+									"</callingFuncArgsWithContent>"
+									<PARSE_PRIMARY> 
+									[
+										"<callingFuncArgsWithContent>"
+											pPrimaryNode##
+										"</callingFuncArgsWithContent>"
+										<PARSE_QUANTIFIERS> 
+									] 
+									"<code>"
+										pReturnNode = pPrimaryNode;
+									"</code>"
+									;
+		
+<PARSE_PRIMARY>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		(	'.'
+										"<code>"
+											pReturnNode = std::make_shared<DotASTNode>();
+										"</code>"
+										| 
+										TK_CHARACTER 
+										"<code>"
+											pReturnNode = std::make_shared<CharacterASTNode>(PREV_TOKEN_TEXT[0]);
+										"</code>"
+										| 
+										"<callingFuncArgsWithContent>"
+											pReturnNode##
+										"</callingFuncArgsWithContent>"
+										<PARSE_CHARACTER_SET> 
+										| 
+										"<callingFuncArgsWithContent>"
+											pReturnNode##
+										"</callingFuncArgsWithContent>"
+										<PARSE_GROUP_CAPTURES> 
+									) ;
+		
+<PARSE_CHARACTER_SET>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		'[' 
+										"<code>"
+											std::shared_ptr<CharacterClassASTNode> pCharacterClassNode = std::make_shared<CharacterClassASTNode>();
+										"</code>"
+										[
+											'^'
+											"<code>"
+												pCharacterClassNode->setNegated(true);
+											"</code>"
+										]
+										{ 
+											"<callingFuncArgsWithContent>"
+												pCharacterClassNode##
+											"</callingFuncArgsWithContent>"
+											<PARSE_CHARACTER_RANGE> 
+										} 
+									']' 
+									"<code>"
+										pReturnNode = pCharacterClassNode;
+									"</code>"
+									;
+		
+<PARSE_CHARACTER_RANGE>
+"<funcArgList>"
+	std::shared_ptr<CharacterClassASTNode>& pReturnNode
+"</funcArgList>"
+							::=		"<code>"
+										char startChar, endChar;
+									"</code>"
+									<PARSE_CHARACTER_OR_INTEGER> 
+										"<code>"
+											startChar = PREV_TOKEN_TEXT[0];
+										"</code>"
+									[
+										"<callingFuncArgsWithContent>"
+											pReturnNode##pReturnNode->addChar(startChar);
+										"</callingFuncArgsWithContent>"
+										<PARSE_CHARACTER_END_RANGE>
+										"<code>"
+											endChar = PREV_TOKEN_TEXT[0];
+											pReturnNode->addRange(startChar, endChar);
+										"</code>"										
+									] ;
+		
+<PARSE_CHARACTER_END_RANGE>
+"<funcArgList>"
+	std::shared_ptr<CharacterClassASTNode>& pReturnNode
+"</funcArgList>"
+							::=		'-' <PARSE_CHARACTER_OR_INTEGER> ;
 
-<PARSE_PRIMARY>					::= 	( '.' | TK_CHARACTER | <CHARACTER_CLASS> | <PARSE_GROUP> ) ;
+<PARSE_CHARACTER_OR_INTEGER>
+"<funcArgList>"
+"</funcArgList>"
+							::=		(
+										TK_CHARACTER
+										|
+										TK_INTEGER
+									) ;
 
-<PARSE_QUANTIFIERS>				::= 	( '*' | '+' | '?' ) ;
+<PARSE_GROUP_CAPTURES>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		'(' 
+										"<callingFuncArgsWithContent>"
+											pReturnNode##
+										"</callingFuncArgsWithContent>"
+										<PARSE_EXPRESSION> 
+									')' ;
+		
+<PARSE_QUANTIFIERS>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::= 	(	'*' 
+											"<code>"
+												std::shared_ptr<RepeatASTNode> pRepeatASTNode = std::make_shared<RepeatASTNode>(pReturnNode, 0, -1);
+												pReturnNode = pRepeatASTNode;
+											"</code>"
+										| 
+										'+' 
+											"<code>"
+												std::shared_ptr<RepeatASTNode> pRepeatASTNode = std::make_shared<RepeatASTNode>(pReturnNode, 1, -1);
+												pReturnNode = pRepeatASTNode;
+											"</code>"
+										| 
+										'?' 
+											"<code>"
+												std::shared_ptr<RepeatASTNode> pRepeatASTNode = std::make_shared<RepeatASTNode>(pReturnNode, 0, 1);
+												pReturnNode = pRepeatASTNode;
+											"</code>"
+										|
+										"<callingFuncArgsWithContent>"
+											pReturnNode##
+										"</callingFuncArgsWithContent>"
+										<PARSE_QUANTIFIERS_X_TIMES>
+									) ;
 
-<PARSE_FACTOR>					::=		<PARSE_PRIMARY> [ <PARSE_QUANTIFIERS> ] ;
-
-<PARSE_TERM>					::=		{ <PARSE_FACTOR> } ;
-
-<PARSE_EXPRESSION>				::= 	<PARSE_TERM> { '|' <PARSE_EXPRESSION> } ;
-
-
-<PRIMARY>						::= 	( '.' | TK_CHARACTER ) ;
-<EXPR>							::= 	{ ( <PARSE_SEQUENCE> | <PARSE_QUANTIFIERS> ) } 
-<PARSE_SEQUENCE>				::= 	( <PRIMARY> | <CHARACTER_CLASS> | <PARSE_GROUP> ) 
+<PARSE_QUANTIFIERS_X_TIMES>
+"<funcArgList>"
+	std::shared_ptr<ASTNode>& pReturnNode
+"</funcArgList>"
+							::=		'{'
+										"<code>"
+												std::shared_ptr<RepeatASTNode> pRepeatASTNode = std::make_shared<RepeatASTNode>(pReturnNode, -1, -1);
+												int iMin = 0, iMax = 0;
+										"</code>"
+										TK_INTEGER
+										"<code>"
+											iMin = atoi(PREV_TOKEN_TEXT);
+											pRepeatASTNode->setMin(iMin);
+											pRepeatASTNode->setExactMin(true);
+										"</code>"
+										[
+											','
+											"<code>"
+												pRepeatASTNode->setExactMin(false);
+											"</code>"
+											[
+												TK_INTEGER
+												"<code>"
+													iMax = atoi(PREV_TOKEN_TEXT);
+													pRepeatASTNode->setMax(iMax);
+													pRepeatASTNode->setExactMin(false);
+												"</code>"
+											]
+										]
+									'}'
+									"<code>"
+										pReturnNode = pRepeatASTNode;
+									"</code>"
+									;

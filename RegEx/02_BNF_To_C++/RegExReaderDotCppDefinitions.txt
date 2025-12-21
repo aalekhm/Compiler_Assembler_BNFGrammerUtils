@@ -22,7 +22,8 @@ void RegExReader::read(const char* sFile)
 		addKeywords();
 		GrammerUtils::getNextToken();
 
-		def();
+		std::shared_ptr<ASTNode> pRootASTNode;
+		def(pRootASTNode);
 	}
 	/////////////////////////////////////////////////////////////////////////////////
 }

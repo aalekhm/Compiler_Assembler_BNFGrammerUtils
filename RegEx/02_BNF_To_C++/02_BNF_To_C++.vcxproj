@@ -32,6 +32,15 @@
     <ClInclude Include="include\StringTokenizer.h" />
     <ClInclude Include="include\Token.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="RegExReaderDotCppDefinitions.txt" />
+    <Text Include="RegExReaderDotHDeclares.txt" />
+    <Text Include="RegExReaderDotHIncludes.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="copyRegExReader.bat" />
+    <None Include="TestCases\RegEx.gr" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{04794BED-378E-4977-BF5F-EF8228C3D104}</ProjectGuid>
     <RootNamespace>My01_BNF_To_C</RootNamespace>
@@ -101,6 +110,9 @@
       <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_MBCS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <PostBuildEvent>
+      <Command>copyRegExReader.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

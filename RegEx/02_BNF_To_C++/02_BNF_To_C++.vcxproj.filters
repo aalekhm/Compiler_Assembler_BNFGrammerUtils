@@ -9,9 +9,11 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{5674ba8d-8d74-490d-afcc-df7f9b67d048}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestCases">
+      <UniqueIdentifier>{fd8eaef7-e722-48bc-8141-2c47fd527869}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -47,5 +49,24 @@
     <ClInclude Include="include\StringTokenizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="RegExReaderDotCppDefinitions.txt">
+      <Filter>Misc</Filter>
+    </Text>
+    <Text Include="RegExReaderDotHDeclares.txt">
+      <Filter>Misc</Filter>
+    </Text>
+    <Text Include="RegExReaderDotHIncludes.txt">
+      <Filter>Misc</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="copyRegExReader.bat">
+      <Filter>Misc</Filter>
+    </None>
+    <None Include="TestCases\RegEx.gr">
+      <Filter>TestCases</Filter>
+    </None>
   </ItemGroup>
 </Project>

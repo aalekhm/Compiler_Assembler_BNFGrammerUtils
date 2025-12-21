@@ -9,15 +9,14 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="Resource Files">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
     <Filter Include="Header Files\RegEx">
       <UniqueIdentifier>{48191b54-9469-40df-a4e1-65f04800ddb5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\RegEx">
       <UniqueIdentifier>{82d7e6dc-b47b-4f1d-a179-e7731af5cf15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TestCases">
+      <UniqueIdentifier>{94e82063-dde8-4493-82c3-b98dec19787b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -77,5 +76,10 @@
     <ClCompile Include="source\RegEx\RegExReader.cpp">
       <Filter>Source Files\RegEx</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="TestCases\RegEx.txt">
+      <Filter>TestCases</Filter>
+    </Text>
   </ItemGroup>
 </Project>

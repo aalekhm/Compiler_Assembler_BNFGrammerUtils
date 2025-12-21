@@ -1,5 +1,5 @@
 <NotepadPlus>
-    <UserLang name="Grammer" ext="gr" udlVersion="2.1">
+    <UserLang name="BNF Grammer" ext="gr" udlVersion="2.1">
         <Settings>
             <Global caseIgnored="no" allowFoldOfComments="no" foldCompact="no" forcePureLC="0" decimalSeparator="0" />
             <Prefix Keywords1="no" Keywords2="no" Keywords3="yes" Keywords4="no" Keywords5="no" Keywords6="no" Keywords7="no" Keywords8="no" />
@@ -32,32 +32,32 @@
             <Keywords name="Keywords6"></Keywords>
             <Keywords name="Keywords7"></Keywords>
             <Keywords name="Keywords8"></Keywords>
-            <Keywords name="Delimiters">00&quot;&lt;code&gt;&quot; 01 02&quot;&lt;/code&gt;&quot; 03&lt; 04 05&gt; 06&apos; 07 08&apos; 09&quot; 10 11&quot; 12 13 14 15 16 17 18 19 20 21 22 23</Keywords>
+            <Keywords name="Delimiters">00&quot;&lt;code&gt;&quot; 01 02&quot;&lt;/code&gt;&quot; 03&quot;&lt;funcArgList&gt;&quot; 04 05&quot;&lt;/funcArgList&gt;&quot; 06&quot;&lt;callingFuncArgsWithContent&gt;&quot; 07 08&quot;&lt;/callingFuncArgsWithContent&gt;&quot; 09&quot; 10 11&quot; 12&lt; 13 14&gt; 15&apos; 16 17&apos; 18 19 20 21 22 23</Keywords>
         </KeywordLists>
         <Styles>
             <WordsStyle name="DEFAULT" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="COMMENTS" fgColor="00FF80" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="LINE COMMENTS" fgColor="00FF80" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="NUMBERS" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="KEYWORDS1" fgColor="FF0000" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="KEYWORDS2" fgColor="FFFF00" bgColor="000000" fontName="" fontStyle="1" nesting="0" />
-            <WordsStyle name="KEYWORDS3" fgColor="00FFFF" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="KEYWORDS4" fgColor="FF0000" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="KEYWORDS5" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="KEYWORDS6" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="COMMENTS" fgColor="00FF80" bgColor="000000" fontName="Cascadia Mono" fontStyle="0" nesting="0" />
+            <WordsStyle name="LINE COMMENTS" fgColor="00FF80" bgColor="000000" fontName="Cascadia Mono" fontStyle="0" nesting="0" />
+            <WordsStyle name="NUMBERS" fgColor="000000" bgColor="FFFFFF" fontName="&#x6262;&#x31BE;&#xCCD4;&#x1029;&#xDA00;&#xBC63;&#x01C8;" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS1" fgColor="FF0000" bgColor="000000" fontName="Cascadia Mono" fontStyle="1" nesting="0" />
+            <WordsStyle name="KEYWORDS2" fgColor="FFFF00" bgColor="000000" fontName="Cascadia Mono" fontStyle="1" nesting="0" />
+            <WordsStyle name="KEYWORDS3" fgColor="00FFFF" bgColor="000000" fontName="Cascadia Mono" fontStyle="1" nesting="0" />
+            <WordsStyle name="KEYWORDS4" fgColor="FF0000" bgColor="000000" fontName="&#xF5E4;&#xE75B;&#x0800;&#x9000;firstVisibleLine" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS5" fgColor="000000" bgColor="FFFFFF" fontName="tVisibleLine" fontStyle="0" nesting="0" />
+            <WordsStyle name="KEYWORDS6" fgColor="000000" bgColor="FFFFFF" fontName="&#x26EB;&#xE7A4;&#x0261;&#x8800;9" fontStyle="0" nesting="0" />
             <WordsStyle name="KEYWORDS7" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
             <WordsStyle name="KEYWORDS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
             <WordsStyle name="OPERATORS" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="FOLDER IN CODE1" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="FOLDER IN CODE2" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="FOLDER IN COMMENT" fgColor="000000" bgColor="00FF80" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="DELIMITERS1" fgColor="C0C0C0" bgColor="000000" fontName="" fontStyle="2" nesting="0" />
-            <WordsStyle name="DELIMITERS2" fgColor="FF8000" bgColor="000000" fontName="" fontStyle="1" nesting="0" />
-            <WordsStyle name="DELIMITERS3" fgColor="FF80FF" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="DELIMITERS4" fgColor="FF80FF" bgColor="000000" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="DELIMITERS5" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="DELIMITERS6" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
-            <WordsStyle name="DELIMITERS7" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN CODE1" fgColor="000000" bgColor="FFFFFF" fontName="ng\N&#x000B;" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN CODE2" fgColor="000000" bgColor="FFFFFF" fontName="&#x8000;&#x442C;" fontStyle="0" nesting="0" />
+            <WordsStyle name="FOLDER IN COMMENT" fgColor="000000" bgColor="00FF80" fontName="&#x8000;&#x442C;" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS1" fgColor="C0C0C0" bgColor="000000" fontName="Cascadia Mono Light" fontStyle="2" fontSize="9" nesting="0" />
+            <WordsStyle name="DELIMITERS2" fgColor="80FF80" bgColor="000000" fontName="Cascadia Mono Light" fontStyle="2" fontSize="9" nesting="0" />
+            <WordsStyle name="DELIMITERS3" fgColor="FF80C0" bgColor="000000" fontName="Cascadia Mono Light" fontStyle="2" fontSize="9" nesting="0" />
+            <WordsStyle name="DELIMITERS4" fgColor="FF80FF" bgColor="000000" fontName="Cascadia Mono" fontStyle="0" nesting="0" />
+            <WordsStyle name="DELIMITERS5" fgColor="FF8000" bgColor="000000" fontName="Cascadia Mono" fontStyle="1" nesting="0" />
+            <WordsStyle name="DELIMITERS6" fgColor="FF80FF" bgColor="000000" fontName="Cascadia Mono" fontStyle="1" nesting="0" />
+            <WordsStyle name="DELIMITERS7" fgColor="000000" bgColor="FFFFFF" fontName="&#x29B8;&#x538B;&#x7FFC;" fontStyle="0" nesting="0" />
             <WordsStyle name="DELIMITERS8" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" nesting="0" />
         </Styles>
     </UserLang>

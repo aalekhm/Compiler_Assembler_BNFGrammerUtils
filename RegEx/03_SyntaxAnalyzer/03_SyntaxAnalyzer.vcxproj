@@ -135,6 +135,9 @@
     <ClCompile Include="source\RegEx\RegExReader.cpp" />
     <ClCompile Include="source\StringTokenizer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="TestCases\RegEx.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

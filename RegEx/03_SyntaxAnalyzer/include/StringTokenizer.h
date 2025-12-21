@@ -38,6 +38,7 @@ protected:
 		char						peek(int iOffset);
 		void						consume(int iOffset);
 		Token						createToken(TokenType_::Type eTokenType);
+		Token						readNumber();
 		Token						readEOL();
 		Token						readString();
 		Token						readCharacter();

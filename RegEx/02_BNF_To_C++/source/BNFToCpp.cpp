@@ -1,8 +1,20 @@
 #include "BNFToCpp.h"
 #include "NonTerminal.h"
 
+#define ARGS_CONTENT_DELIM "##"
 #define WRITE_LINE(__rafOut__, __line__) __rafOut__->writeLine(__line__);
 #define WRITE_BUF(__rafOut__, __line__) __rafOut__->write(__line__);
+#define WRITE_FORMATTED_LINE(__Line__, ...) \
+sprintf_s(sLine, __Line__, __VA_ARGS__);	WRITE_LINE(rafOut, sLine); \
+
+#define EXTRACT_ARGS_AND_CONTENT_FROM_TOKEN(__Token__) \
+std::vector<std::string> vArgsWithContent	= StringTokenizer::splitString(__Token__.getText(), std::string(ARGS_CONTENT_DELIM)); \
+std::string sArgs							= vArgsWithContent[0]; \
+std::string sContent						= vArgsWithContent[1]; \
+
+#define EXTRACT_ARGS_FROM_TOKEN(__Token__) \
+std::string sArgList = __Token__.getText(); \
+StringTokenizer::trimString(sArgList); \
 
 BNFToCpp::BNFToCpp()
 {
@@ -150,7 +162,11 @@ void BNFToCpp::generateDotH()
 				NonTerminal* pNonTerminal = m_vNonterminals.at(i);
 				Token tok = pNonTerminal->get();
 
-				sprintf_s(sLine, "\t\tbool %s();", tok.getText());
+				Token firstToken = pNonTerminal->getTokenList()[0];
+				std::string sArgList = firstToken.getText();
+				StringTokenizer::trimString(sArgList);
+
+				sprintf_s(sLine, "\t\tbool %s(%s);", tok.getText(), sArgList.c_str());
 				WRITE_LINE(rafOut, sLine);
 			}
 			WRITE_LINE(rafOut, "");
@@ -187,6 +203,7 @@ void BNFToCpp::generateDotCPP()
 			NonTerminal* pNonTerminal = m_vNonterminals[i];
 			const std::vector<Token>& vTokenList = pNonTerminal->getTokenList();
 
+			m_FirstToken = vTokenList[0];
 			onTokenCallback(rafOut.get(), m_sClassName.c_str(), pNonTerminal->get());
 
 			size_t iTokenListSize = vTokenList.size();
@@ -225,183 +242,252 @@ void BNFToCpp::onTokenCallback(RandomAccessFile* rafOut, const char* sClassName,
 
 	switch (eTokenType)
 	{
-	case TokenType_::Type::TK_BNFNONTERMINAL:
-	{
-		if (m_eGrammerState == EGrammerState::WRITING_FUNCTION_START)
+		case TokenType_::Type::TK_BNFNONTERMINAL:
 		{
-			sprintf_s(sLine, "bool %s::%s() {", sClassName, sValue.c_str());
-			WRITE_LINE(rafOut, sLine);
+			if (m_eGrammerState == EGrammerState::WRITING_FUNCTION_START)
+			{
+				if (m_FirstToken.getType() == TokenType_::Type::TK_FUNCARGLIST)
+				{
+					EXTRACT_ARGS_FROM_TOKEN(m_FirstToken);
 
-			m_eGrammerState = EGrammerState::WRITING_FUNCTION;
-		}
-		else
+					WRITE_FORMATTED_LINE("bool %s::%s(%s) {", sClassName, sValue.c_str(), sArgList.c_str());
+				}
+				else
+				{
+					WRITE_FORMATTED_LINE("bool %s::%s() {", sClassName, sValue.c_str());
+				}
+			
+				m_eGrammerState = EGrammerState::WRITING_FUNCTION;
+			}
+			else
 			if (m_eGrammerState == EGrammerState::WRITING_FUNCTION)
 			{
 				if (m_bOptional)
 				{
-					sprintf_s(sLine, "if(!%s()) {", sValue.c_str());	WRITE_LINE(rafOut, sLine);
-					sprintf_s(sLine, "}");							WRITE_LINE(rafOut, sLine);
-					sprintf_s(sLine, "else {");						WRITE_LINE(rafOut, sLine);
+					if (m_LastToken.getType() == TokenType_::Type::TK_CALLINGFUNCAARGSWITHCONTENT)
+					{
+						EXTRACT_ARGS_AND_CONTENT_FROM_TOKEN(m_LastToken);
+
+						WRITE_FORMATTED_LINE("if(!%s(%s)) {",	sValue.c_str(), sArgs.c_str());
+						WRITE_FORMATTED_LINE("%s",				sContent.c_str());
+					}
+					else
+					{
+						WRITE_FORMATTED_LINE("if(!%s()) {", sValue.c_str());
+					}
+
+					WRITE_FORMATTED_LINE("}");
+					WRITE_FORMATTED_LINE("else {");
 
 					m_bOptional = false;
 				}
 				else
-					if (m_bWhile)
+				if (m_bWhile)
+				{
+					if (m_LastToken.getType() == TokenType_::Type::TK_CALLINGFUNCAARGSWITHCONTENT)
 					{
-						sprintf_s(sLine, "if(%s()) {", sValue.c_str());	WRITE_LINE(rafOut, sLine);
-						m_bWhile = false;
+						EXTRACT_ARGS_AND_CONTENT_FROM_TOKEN(m_LastToken);
+
+						WRITE_FORMATTED_LINE("if(%s(%s)) {",	sValue.c_str(), sArgs.c_str());
+						WRITE_FORMATTED_LINE("%s",				sContent.c_str());
 					}
 					else
-						if (m_bORed || m_bORedFirst)
-						{
-							if (m_bORedFirst)
-							{
-								m_bORedFirst = false;
-							}
-							else
-							{
-								sprintf_s(sLine, "return true;");	WRITE_LINE(rafOut, sLine);
-								sprintf_s(sLine, "}\r\nelse");					WRITE_LINE(rafOut, sLine);
-							}
+					{
+						WRITE_FORMATTED_LINE("if(%s()) {", sValue.c_str());
+					}
 
-							sprintf_s(sLine, "if(%s()) {", sValue.c_str());		WRITE_LINE(rafOut, sLine);
-						}
-						else
-						{
-							sprintf_s(sLine, "if(!%s())\r\nreturn false;", sValue.c_str());	WRITE_LINE(rafOut, sLine);
-						}
+					m_bWhile = false;
+				}
+				else
+				if (m_bORed || m_bORedFirst)
+				{
+					if (m_bORedFirst)
+					{
+						m_bORedFirst = false;
+					}
+					else
+					{
+						WRITE_FORMATTED_LINE("return true;");
+						WRITE_FORMATTED_LINE("}\r\nelse");
+					}
+
+					if (m_LastToken.getType() == TokenType_::Type::TK_CALLINGFUNCAARGSWITHCONTENT)
+					{
+						EXTRACT_ARGS_AND_CONTENT_FROM_TOKEN(m_LastToken);
+
+						WRITE_FORMATTED_LINE("if(%s(%s)) {",	sValue.c_str(), sArgs.c_str());
+						WRITE_FORMATTED_LINE("%s",				sContent.c_str());
+					}
+					else
+					{
+						WRITE_FORMATTED_LINE("if(%s()) {", sValue.c_str());
+					}
+				}
+				else
+				{
+					if (m_LastToken.getType() == TokenType_::Type::TK_CALLINGFUNCAARGSWITHCONTENT)
+					{
+						EXTRACT_ARGS_AND_CONTENT_FROM_TOKEN(m_LastToken);
+
+						WRITE_FORMATTED_LINE("if(!%s(%s)) {",	sValue.c_str(), sArgs.c_str());
+						WRITE_FORMATTED_LINE("%s",				sContent.c_str());
+						WRITE_FORMATTED_LINE("return false; }");
+					}
+					else
+					{
+						WRITE_FORMATTED_LINE("if(!%s())\r\nreturn false;", sValue.c_str());
+					}
+				}
 			}
-	}
-	break;
-	case TokenType_::Type::TK_BNFCODE:
-	{
-		sprintf_s(sLine, "%s", sValue.c_str());	WRITE_LINE(rafOut, sLine);
-	}
-	break;
-	case TokenType_::Type::TK_STRING:
-	case TokenType_::Type::TK_IDENTIFIER:
-		if (m_bOptional)
-		{
-			if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
-				sprintf_s(sLine, "if(!GrammerUtils::match(\"%s\", OPTIONAL_)) {\r\n", sValue.c_str());
-			else
-				sprintf_s(sLine, "if(!GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {\r\n", sValue.c_str());
-			WRITE_LINE(rafOut, sLine);
-			sprintf_s(sLine, "}\r\n");													WRITE_LINE(rafOut, sLine);
-			sprintf_s(sLine, "else {\r\n");												WRITE_LINE(rafOut, sLine);
-
-			m_bOptional = false;
 		}
-		else
+		break;
+		case TokenType_::Type::TK_BNFCODE:
+		{
+			sprintf_s(sLine, "%s", sValue.c_str());	WRITE_LINE(rafOut, sLine);
+		}
+		break;
+		case TokenType_::Type::TK_STRING:
+		case TokenType_::Type::TK_IDENTIFIER:
+		{
+			if (m_bOptional)
+			{
+				if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
+				{
+					WRITE_FORMATTED_LINE("if(!GrammerUtils::match(\"%s\", OPTIONAL_)) {\r\n", sValue.c_str());
+				}
+				else
+				{
+					WRITE_FORMATTED_LINE("if(!GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {\r\n", sValue.c_str());
+				}
+
+				WRITE_FORMATTED_LINE("}\r\n");
+				WRITE_FORMATTED_LINE("else {\r\n");
+
+				m_bOptional = false;
+			}
+			else
 			if (m_bWhile)
 			{
 				if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
-					sprintf_s(sLine, "if(GrammerUtils::match(\"%s\", OPTIONAL_)) {\r\n", sValue.c_str());
+				{
+					WRITE_FORMATTED_LINE("if(GrammerUtils::match(\"%s\", OPTIONAL_)) {\r\n", sValue.c_str());
+				}
 				else
-					sprintf_s(sLine, "if(GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {\r\n", sValue.c_str());
-				WRITE_LINE(rafOut, sLine);
+				{
+					WRITE_FORMATTED_LINE("if(GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {\r\n", sValue.c_str());
+				}
+
 				m_bWhile = false;
 			}
 			else
-				if (m_bORed || m_bORedFirst)
+			if (m_bORed || m_bORedFirst)
+			{
+				if (m_bORedFirst)
 				{
-					if (m_bORedFirst)
-					{
-						m_bORedFirst = false;
-					}
-					else
-					{
-						sprintf_s(sLine, "return true;");		WRITE_LINE(rafOut, sLine);
-						sprintf_s(sLine, "}\r\nelse");		WRITE_LINE(rafOut, sLine);
-					}
-
-					if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
-						sprintf_s(sLine, "if(GrammerUtils::match(\"%s\", OPTIONAL_)) {", sValue.c_str());
-					else
-						sprintf_s(sLine, "if(GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {", sValue.c_str());
-					WRITE_LINE(rafOut, sLine);
+					m_bORedFirst = false;
 				}
 				else
 				{
-					if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
-						sprintf_s(sLine, "if(!GrammerUtils::match(\"%s\", MANDATORY_))\r\nreturn false;", sValue.c_str());
-					else
-						sprintf_s(sLine, "if(!GrammerUtils::match(TokenType_::Type::%s, MANDATORY_))\r\nreturn false;", sValue.c_str());
-					WRITE_LINE(rafOut, sLine);
+					WRITE_FORMATTED_LINE("return true;");
+					WRITE_FORMATTED_LINE("}\r\nelse");
 				}
-		break;
-	case TokenType_::Type::TK_CHARACTER:
-	{
-		if (m_bOptional)
-		{
-			sprintf_s(sLine, "if(!GrammerUtils::match(\'%c\', OPTIONAL_)) {\r\n", sValue[0]);		WRITE_LINE(rafOut, sLine);
-			sprintf_s(sLine, "}\r\n");															WRITE_LINE(rafOut, sLine);
-			sprintf_s(sLine, "else {\r\n");														WRITE_LINE(rafOut, sLine);
 
-			m_bOptional = false;
+				if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
+				{
+					WRITE_FORMATTED_LINE("if(GrammerUtils::match(\"%s\", OPTIONAL_)) {", sValue.c_str());
+				}
+				else
+				{
+					WRITE_FORMATTED_LINE("if(GrammerUtils::match(TokenType_::Type::%s, OPTIONAL_)) {", sValue.c_str());
+				}
+			}
+			else
+			{
+				if (TokenType_::Type::TK_INVALID == TokenType_::fromString(sValue))
+				{
+					WRITE_FORMATTED_LINE("if(!GrammerUtils::match(\"%s\", MANDATORY_))\r\nreturn false;", sValue.c_str());
+				}
+				else
+				{
+					WRITE_FORMATTED_LINE("if(!GrammerUtils::match(TokenType_::Type::%s, MANDATORY_))\r\nreturn false;", sValue.c_str());
+				}
+			}
 		}
-		else
+		break;
+		case TokenType_::Type::TK_CHARACTER:
+		{
+			if (m_bOptional)
+			{
+				WRITE_FORMATTED_LINE("if(!GrammerUtils::match(\'%c\', OPTIONAL_)) {\r\n", sValue[0]);
+				WRITE_FORMATTED_LINE("}\r\n");
+				WRITE_FORMATTED_LINE("else {\r\n");
+
+				m_bOptional = false;
+			}
+			else
 			if (m_bWhile)
 			{
-				sprintf_s(sLine, "if(GrammerUtils::match(\'%c\', OPTIONAL_)) {\r\n", sValue[0]);		WRITE_LINE(rafOut, sLine);
+				WRITE_FORMATTED_LINE("if(GrammerUtils::match(\'%c\', OPTIONAL_)) {\r\n", sValue[0]);
 				m_bWhile = false;
 			}
 			else
-				if (m_bORed || m_bORedFirst)
+			if (m_bORed || m_bORedFirst)
+			{
+				if (m_bORedFirst)
 				{
-					if (m_bORedFirst)
-					{
-						m_bORedFirst = false;
-					}
-					else
-					{
-						sprintf_s(sLine, "return true;");		WRITE_LINE(rafOut, sLine);
-						sprintf_s(sLine, "}\r\nelse");		WRITE_LINE(rafOut, sLine);
-					}
-
-					sprintf_s(sLine, "if(GrammerUtils::match(\'%c\', OPTIONAL_)) {", sValue[0]);	WRITE_LINE(rafOut, sLine);
+					m_bORedFirst = false;
 				}
 				else
 				{
-					sprintf_s(sLine, "if(!GrammerUtils::match(\'%c\', MANDATORY_))\r\nreturn false;", sValue[0]);	WRITE_LINE(rafOut, sLine);
+					WRITE_FORMATTED_LINE("return true;");
+					WRITE_FORMATTED_LINE("}\r\nelse");
 				}
-	}
-	break;
-	case TokenType_::Type::TK_LBRACE:
-		WRITE_LINE(rafOut, "while(true) {");
-		m_bWhile = true;
-		break;
-	case TokenType_::Type::TK_SEMICOL:
-		WRITE_LINE(rafOut, "return true;\r\n");
-		WRITE_LINE(rafOut, "}\r\n");
 
-		m_eGrammerState = EGrammerState::WRITING_FUNCTION_START;
+				WRITE_FORMATTED_LINE("if(GrammerUtils::match(\'%c\', OPTIONAL_)) {", sValue[0]);
+			}
+			else
+			{
+				WRITE_FORMATTED_LINE("if(!GrammerUtils::match(\'%c\', MANDATORY_))\r\nreturn false;", sValue[0]);
+			}
+		}
 		break;
-	case TokenType_::Type::TK_LPAREN:
-		m_bORedFirst = true;
+		case TokenType_::Type::TK_LBRACE:
+			WRITE_LINE(rafOut, "while(true) {");
+			m_bWhile = true;
 		break;
-	case TokenType_::Type::TK_RBRACE:
-		WRITE_LINE(rafOut, "}");
-		WRITE_LINE(rafOut, "else\r\nbreak;");
-		WRITE_LINE(rafOut, "}\r\n");
-		m_bWhile = false;
+		case TokenType_::Type::TK_SEMICOL:
+			WRITE_LINE(rafOut, "return true;\r\n");
+			WRITE_LINE(rafOut, "}\r\n");
+
+			m_eGrammerState = EGrammerState::WRITING_FUNCTION_START;
 		break;
-	case TokenType_::Type::TK_RPAREN:
-		WRITE_LINE(rafOut, "return true;\r\n}");
-		WRITE_LINE(rafOut, "else\r\nreturn false;\r\n");
-		m_bORed = false;
+		case TokenType_::Type::TK_LPAREN:
+			m_bORedFirst = true;
 		break;
-	case TokenType_::Type::TK_BITWISEOR:
-		m_bORed = true;
+		case TokenType_::Type::TK_RBRACE:
+			WRITE_LINE(rafOut, "}");
+			WRITE_LINE(rafOut, "else\r\nbreak;");
+			WRITE_LINE(rafOut, "}\r\n");
+			m_bWhile = false;
 		break;
-	case TokenType_::Type::TK_LSQBRACKET:
-		m_bOptional = true;
+		case TokenType_::Type::TK_RPAREN:
+			WRITE_LINE(rafOut, "return true;\r\n}");
+			WRITE_LINE(rafOut, "else\r\nreturn false;\r\n");
+			m_bORed = false;
 		break;
-	case TokenType_::Type::TK_RSQBRACKET:
-		WRITE_LINE(rafOut, "}\r\n");
-		m_bOptional = false;
+		case TokenType_::Type::TK_BITWISEOR:
+			m_bORed = true;
+		break;
+		case TokenType_::Type::TK_LSQBRACKET:
+			m_bOptional = true;
+		break;
+		case TokenType_::Type::TK_RSQBRACKET:
+			WRITE_LINE(rafOut, "}\r\n");
+			m_bOptional = false;
 		break;
 	}
+
+	m_LastToken = tok;
 }
 
 BNFToCpp::~BNFToCpp()

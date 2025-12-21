@@ -145,6 +145,32 @@ Token StringTokenizer::createToken(TokenType_::Type eTokenType)
 	return Token(eTokenType, sText, m_iSavedLine, m_iSavedColumn);
 }
 
+Token StringTokenizer::readNumber()
+{
+	initRead();
+	bool bHasDot = false;
+
+	// Read the 1st digit
+	consume(1);
+
+	while (true)
+	{
+		char ch = peek(0);
+		if (::isdigit(ch))
+			consume(1);
+		else
+		if (ch == '.' && NOT bHasDot)
+		{
+			bHasDot = true;
+			consume(1);
+		}
+		else
+			break;
+	}
+
+	return createToken( bHasDot ? TokenType_::Type::TK_FLOAT : TokenType_::Type::TK_INTEGER);
+}
+
 Token StringTokenizer::readEOL()
 {
 	char ch = peek(0);
@@ -290,6 +316,7 @@ Token StringTokenizer::readDefault(char ch0)
 
 	else if(ch0 == CARRIAGE_RETURN && ch1 == LINE_FEED)						{ initRead(); consume(2); return readEOL(); }
 	else if(ch0 == LINE_FEED)												{ return readEOL(); }
+	else if(isdigit(ch0) /* || (ch0 == '-' && isdigit(ch1))*/)				{ return readNumber(); }
 	else if(ch0 == '/' && ch1 == '/')										{ return readSingleLineComment(); }
 	//else if(ch0 == ';')														{ return readAssemblySingleLineComment(); }
 	else if(ch0 == '/' && ch1 == '*')										{ return readMultiLineComment(); }

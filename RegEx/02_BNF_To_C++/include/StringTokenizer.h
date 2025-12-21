@@ -25,6 +25,10 @@ class StringTokenizer
 		Token						prevToken();
 
 		bool						hasFloatingPoint() { return m_bHasFloatingPoint; }
+
+		static void					trimString(std::string& sInOutStr);
+		static std::vector<std::string>					
+									splitString(const std::string& sInStrConst, const std::string& sDelim);
 protected:
 	private:
 									StringTokenizer() = delete;
@@ -47,6 +51,8 @@ protected:
 		Token						readSystemIdentifier();
 		Token						readBNFNonTerminal();
 		Token						readBNFCode();
+		Token						readCallingFuncArgsWithContent();
+		Token						readFuncArgList();
 		Token						readSingleLineComment();
 		Token						readAssemblySingleLineComment();
 		Token						readMultiLineComment();
@@ -54,6 +60,8 @@ protected:
 		Token						readPointerDeref();
 
 		bool						isBNFCode(bool bStartTag);
+		bool						isCallingFuncArgsWithContent(bool bStartTag);
+		bool						isFuncArgList(bool bStartTag);
 
 		int							m_iCurrPos;
 		int							m_iSavedPos;

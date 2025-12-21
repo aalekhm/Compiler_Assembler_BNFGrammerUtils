@@ -30,6 +30,8 @@ class BNFToCpp
 		std::vector<Token>			m_vTokens;
 		std::vector<NonTerminal*>	m_vNonterminals;
 		std::vector<Token>			m_vKeywords;
+		Token						m_LastToken;
+		Token						m_FirstToken;
 
 		std::string					m_sClassName;
 

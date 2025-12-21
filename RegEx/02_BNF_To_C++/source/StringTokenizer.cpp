@@ -1,4 +1,12 @@
 #include "StringTokenizer.h"
+#include <regex>
+
+#define CODE_START_TAG							"\"<code>\""
+#define CODE_END_TAG							"\"<\/code>\""
+#define CALLINGFUNCARGSWITHCONTENT_START_TAG	"\"<callingFuncArgsWithContent>\""
+#define CALLINGFUNCARGSWITHCONTENT_END_TAG		"\"<\/callingFuncArgsWithContent>\""
+#define FUNCARGLIST_START_TAG					"\"<funcArgList>\""
+#define FUNCARGLIST_END_TAG						"\"<\/funcArgList>\""
 
 StringTokenizer* StringTokenizer::create(const char* sData, bool bIgnoreBNFNonTerminals)
 {
@@ -102,6 +110,40 @@ void StringTokenizer::tokenize()
 	};
 
 	m_TokensIterator = m_vTokens.begin();
+}
+
+void StringTokenizer::trimString(std::string& sInOutStr)
+{
+	static const std::regex ws_re("^\\s+|\\s+$");
+	sInOutStr = std::regex_replace(sInOutStr, ws_re, "");
+}
+
+std::vector<std::string> StringTokenizer::splitString(const std::string& sInStrConst, const std::string& sDelim)
+{
+	std::string sInput(sInStrConst);
+	trimString(sInput);
+
+	std::vector<std::string> vTokens;
+	size_t start = 0;
+	size_t end;
+
+	// Avoid infinite loop if delimiter is empty
+	if (sDelim.empty())
+	{
+		vTokens.push_back(sInput);
+		return vTokens;
+	}
+
+	while ((end = sInput.find(sDelim, start)) != std::string::npos)
+	{
+		vTokens.push_back(sInput.substr(start, end - start));
+		start = end + sDelim.length();
+	}
+
+	// Last Token
+	vTokens.push_back(sInput.substr(start));
+
+	return vTokens;
 }
 
 Token StringTokenizer::getNextToken()
@@ -312,6 +354,9 @@ Token StringTokenizer::readDefault(char ch0)
 	//else if(ch0 == ';')														{ return readAssemblySingleLineComment(); }
 	else if(ch0 == '/' && ch1 == '*')										{ return readMultiLineComment(); }
 	else if(isBNFCode(true) && NOT m_bIgnoreBNFNonTerminals)				{ return readBNFCode(); }
+	else if(isCallingFuncArgsWithContent(true) && NOT m_bIgnoreBNFNonTerminals) 
+																			{ return readCallingFuncArgsWithContent(); }
+	else if(isFuncArgList(true) && NOT m_bIgnoreBNFNonTerminals)			{ return readFuncArgList(); }
 	else if(ch0 == '"')														{ return readString(); }
 	else if(ch0 == '\'' && ch2 == '\'')										{ return readCharacter(); }
 
@@ -506,13 +551,7 @@ bool StringTokenizer::isBNFCode(bool bStartTag)
 				&&
 				(NOT bStartTag ? peek(iPos++) == '/' : true)
 				&&
-				peek(iPos++) == 'c'
-				&&
-				peek(iPos++) == 'o'
-				&&
-				peek(iPos++) == 'd'
-				&&
-				peek(iPos++) == 'e'
+				peek(iPos++) == 'c' && peek(iPos++) == 'o' && peek(iPos++) == 'd' && peek(iPos++) == 'e'
 				&&
 				peek(iPos++) == '>'
 				&&
@@ -522,7 +561,7 @@ bool StringTokenizer::isBNFCode(bool bStartTag)
 
 Token StringTokenizer::readBNFCode()
 {
-	consume(8);
+	consume(std::string(CODE_START_TAG).length());
 	initRead();
 
 	while (true)
@@ -537,7 +576,97 @@ Token StringTokenizer::readBNFCode()
 	}
 
 	Token tok = createToken(TokenType_::Type::TK_BNFCODE);
-	consume(9);
+	consume(std::string(CODE_END_TAG).length());
+
+	return tok;
+}
+
+bool StringTokenizer::isCallingFuncArgsWithContent(bool bStartTag)
+{
+	int iPos = 0;
+	return (	peek(iPos++) == '"'
+				&&
+				peek(iPos++) == '<'
+				&&
+				(NOT bStartTag ? peek(iPos++) == '/' : true)
+				&&
+				peek(iPos++) == 'c' && peek(iPos++) == 'a' && peek(iPos++) == 'l' && peek(iPos++) == 'l' && peek(iPos++) == 'i' && peek(iPos++) == 'n' && peek(iPos++) == 'g'
+				&&
+				peek(iPos++) == 'F' && peek(iPos++) == 'u' && peek(iPos++) == 'n' && peek(iPos++) == 'c'
+				&&
+				peek(iPos++) == 'A' && peek(iPos++) == 'r' && peek(iPos++) == 'g' && peek(iPos++) == 's'
+				&&
+				peek(iPos++) == 'W' && peek(iPos++) == 'i' && peek(iPos++) == 't' && peek(iPos++) == 'h'
+				&&
+				peek(iPos++) == 'C' && peek(iPos++) == 'o' && peek(iPos++) == 'n' && peek(iPos++) == 't' && peek(iPos++) == 'e' && peek(iPos++) == 'n' && peek(iPos++) == 't'
+				&&
+				peek(iPos++) == '>'
+				&&
+				peek(iPos++) == '"'
+			);
+}
+
+Token StringTokenizer::readCallingFuncArgsWithContent()
+{
+	consume(std::string(CALLINGFUNCARGSWITHCONTENT_START_TAG).length());
+	initRead();
+
+	while (true)
+	{
+		char ch = peek(0);
+		if (ch == '"' && isCallingFuncArgsWithContent(false))
+		{
+			break;
+		}
+		else
+			consume(1);
+	}
+
+	Token tok = createToken(TokenType_::Type::TK_CALLINGFUNCAARGSWITHCONTENT);
+	consume(std::string(CALLINGFUNCARGSWITHCONTENT_END_TAG).length());
+
+	return tok;
+}
+
+bool StringTokenizer::isFuncArgList(bool bStartTag)
+{
+	int iPos = 0;
+	return (	peek(iPos++) == '"'
+				&&
+				peek(iPos++) == '<'
+				&&
+				(NOT bStartTag ? peek(iPos++) == '/' : true)
+				&&
+				peek(iPos++) == 'f' && peek(iPos++) == 'u' && peek(iPos++) == 'n' && peek(iPos++) == 'c'
+				&&
+				peek(iPos++) == 'A' && peek(iPos++) == 'r' && peek(iPos++) == 'g'
+				&&
+				peek(iPos++) == 'L' && peek(iPos++) == 'i' && peek(iPos++) == 's' && peek(iPos++) == 't'
+				&&
+				peek(iPos++) == '>'
+				&&
+				peek(iPos++) == '"'
+			);
+}
+
+Token StringTokenizer::readFuncArgList()
+{
+	consume(std::string(FUNCARGLIST_START_TAG).length());
+	initRead();
+
+	while (true)
+	{
+		char ch = peek(0);
+		if (ch == '"' && isFuncArgList(false))
+		{
+			break;
+		}
+		else
+			consume(1);
+	}
+
+	Token tok = createToken(TokenType_::Type::TK_FUNCARGLIST);
+	consume(std::string(FUNCARGLIST_END_TAG).length());
 
 	return tok;
 }

@@ -65,7 +65,7 @@ class RepeatASTNode : public ASTNode
 {
     public:
         RepeatASTNode(std::shared_ptr<ASTNode> pASTNode, int iMin, int iMax)
-        : m_pChildAST(pASTNode), m_iMinReps(iMin), m_iMaxReps(iMax), m_bCountExactMin(true)
+        : m_pChildAST(pASTNode), m_iMinReps(iMin), m_iMaxReps(iMax), m_bCountExactMin(false)
         {}
 
         void setMin(int iMin)
@@ -259,4 +259,15 @@ class CharacterClassASTNode : public ASTNode
     private:
         std::set<char>  m_Chars;
         bool            m_bNegated;
+};
+
+class Regex 
+{
+    public:
+                                    Regex(const std::string& sPattern);
+        bool                        match(const std::string& sText);
+        std::vector<std::string>    findAll(const std::string& sText);
+    
+    private:
+        std::shared_ptr<ASTNode>    m_pRootAST;
 };

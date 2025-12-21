@@ -1,5 +1,8 @@
 		
 		void 													read(const char* sFile);
+		std::shared_ptr<ASTNode>                                parse(const std::string& sPattern);
+
+        std::shared_ptr<ASTNode>                                m_pRootASTNode;
 	protected:							
 									
 	private:							

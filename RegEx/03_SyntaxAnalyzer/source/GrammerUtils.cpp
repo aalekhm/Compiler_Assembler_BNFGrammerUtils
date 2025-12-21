@@ -105,6 +105,12 @@ void GrammerUtils::init()
 	m_HColor = GetStdHandle(STD_OUTPUT_HANDLE); //just once
 }
 
+void GrammerUtils::tokenize(const char* sBuffer)
+{
+	m_pStrTok = StringTokenizer::create(sBuffer);
+	m_pStrTok->tokenize();
+}
+
 bool GrammerUtils::read(const char* sFile)
 {
 	bool bSuccess = false;
@@ -119,8 +125,7 @@ bool GrammerUtils::read(const char* sFile)
 		unsigned long iBytesRead = pRaf->read(sBuff);
 		if (iBytesRead > 0)
 		{
-			m_pStrTok = StringTokenizer::create(sBuff);
-			m_pStrTok->tokenize();
+			tokenize(sBuff);
 		}
 
 		delete[] sBuff;
@@ -129,6 +134,14 @@ bool GrammerUtils::read(const char* sFile)
 	pRaf->close();
 
 	return bSuccess;
+}
+
+void GrammerUtils::parse(const std::string& sContent)
+{
+	if (!sContent.empty())
+	{
+		tokenize(sContent.c_str());
+	}
 }
 
 Token GrammerUtils::getNextToken()

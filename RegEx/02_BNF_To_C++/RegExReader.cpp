@@ -22,10 +22,72 @@ void RegExReader::read(const char* sFile)
 		addKeywords();
 		GrammerUtils::getNextToken();
 
-		std::shared_ptr<ASTNode> pRootASTNode;
-		def(pRootASTNode);
+		def(m_pRootASTNode);
 	}
 	/////////////////////////////////////////////////////////////////////////////////
+}
+
+std::shared_ptr<ASTNode> RegExReader::parse(const std::string& sPattern)
+{
+	if (NOT sPattern.empty())
+	{
+		GrammerUtils::parse(sPattern);
+
+		addKeywords();
+		GrammerUtils::getNextToken();
+		def(m_pRootASTNode);
+
+		return m_pRootASTNode;
+	}
+
+	return nullptr;
+}
+
+Regex::Regex(const std::string& sPattern)
+{
+	RegExReader parser;
+	m_pRootAST = parser.parse(sPattern);
+}
+
+bool Regex::match(const std::string& sText)
+{
+	size_t iPos = 0;
+
+	for (size_t iStart = 0; iStart <= sText.length(); iStart++)
+	{
+		iPos = iStart;
+		if (m_pRootAST->match(sText, iPos))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+std::vector<std::string> Regex::findAll(const std::string& sText)
+{
+	std::vector<std::string> vMatches;
+
+	for (size_t iStart = 0; iStart < sText.length(); iStart++)
+	{
+		size_t iPos = iStart;
+		size_t iOriginalPos = iPos;
+
+		if (m_pRootAST->match(sText, iPos))
+		{
+			vMatches.push_back(sText.substr(iOriginalPos, iPos - iOriginalPos));
+
+			// Skip to the end of this match for the next iteration
+			// (but don't skip if we didn't actually consume anything, to avoid infinite loop)
+			if (iPos > iOriginalPos)
+			{
+				iStart = iPos - 1;
+			}
+		}
+	}
+
+	return vMatches;
 }
 
 

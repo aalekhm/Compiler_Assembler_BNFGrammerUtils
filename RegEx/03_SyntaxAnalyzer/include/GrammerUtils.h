@@ -30,7 +30,9 @@ class GrammerUtils
 		static bool									match(char ch, int TYPE);
 
 		static void									init();
+		static void									parse(const std::string& sContent);
 		static bool									read(const char* sFile);
+		static void									tokenize(const char* sBuffer);
 
 		static bool									isOneOfTheKeywords(std::string sKeyword);
 
